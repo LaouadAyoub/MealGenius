@@ -12,6 +12,7 @@ namespace MealGeniusBackend.Controllers
         // http://localhost:5139/api/MainAPI
         public IActionResult CreateMeal([FromBody] MealModel meal)
         {
+            // add a comment
             // Print the received form values to the console
             System.Console.WriteLine("Cuisine Type: " + meal.CuisineType);
             System.Console.WriteLine("Height: " + meal.Height);
