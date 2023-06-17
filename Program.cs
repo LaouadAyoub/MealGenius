@@ -8,6 +8,18 @@ internal class Program
 
         builder.Services.AddControllers();
 
+        builder.Services.AddCors(options =>
+        {
+            options.AddPolicy("AllowAll",
+                builder =>
+                {
+                    builder
+                    .AllowAnyOrigin()
+                    .AllowAnyMethod()
+                    .AllowAnyHeader();
+                });
+        });
+
         var app = builder.Build();
 
         // Configure the HTTP request pipeline.
@@ -22,11 +34,8 @@ internal class Program
 
         app.UseAuthorization();
 
-        app.UseEndpoints(endpoints =>
-        {
-            endpoints.MapControllers();
-            endpoints.MapFallbackToController("Index", "Home");
-        });
+        app.MapControllers();
+        app.UseCors("AllowAll");
 
 
         app.Run();
