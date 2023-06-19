@@ -1,3 +1,5 @@
+using OpenAI_API;
+
 internal class Program
 {
     private static void Main(string[] args)
@@ -19,6 +21,9 @@ internal class Program
                     .AllowAnyHeader();
                 });
         });
+        // Set the default API authentication using the environment variable
+        APIAuthentication.Default = new APIAuthentication(Environment.GetEnvironmentVariable("OPENAI_API_KEY"));
+        builder.Services.AddSingleton<OpenAI_API.OpenAIAPI>();
 
         var app = builder.Build();
 
