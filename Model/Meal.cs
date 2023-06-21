@@ -2,9 +2,9 @@
 {
     public class Meal
     {
-        // Ingredient Quantities
-        //Nutritional Infos
-        //	Preparation Instructions
-
+        public string Breakfast { get; set; }
+        public string Lunch { get; set; }
+        public string Dinner { get; set; }
+        public string Snack { get; set; }
     }
 }
