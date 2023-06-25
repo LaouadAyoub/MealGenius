@@ -1,4 +1,4 @@
-﻿using MealGeniusBackend.Model;
+﻿using MealGeniusBackend.ModelGPT;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using OpenAI_API;
@@ -8,6 +8,7 @@ using OpenAI_API.Models;
 using System;
 using System.Text.Json;
 using Newtonsoft.Json;
+using MealGeniusBackend.Services;
 
 namespace MealGeniusBackend.Controllers
 {
@@ -15,57 +16,26 @@ namespace MealGeniusBackend.Controllers
     [ApiController]
     public class MainAPI : ControllerBase
     {
-        private readonly OpenAIAPI _openAiApi;
+        private readonly IOpenAIService _openAIService;
 
-        public MainAPI(OpenAIAPI openAiApi)
+        public MainAPI(IOpenAIService openAIService)
         {
-            _openAiApi = openAiApi;
+            _openAIService = openAIService;
         }
 
         [HttpPost]
         public async Task<IActionResult> CreateMeal([FromBody] UserInfos userInfos)
         {
-            var apiKey = "REDACTED";
-            var api = new OpenAI_API.OpenAIAPI(apiKey);
-            var chat = api.Chat.CreateConversation();
-            chat.RequestParameters.MaxTokens = 500;
-            chat.RequestParameters.Temperature = 0.2;
-            chat.Model = OpenAI_API.Models.Model.ChatGPTTurbo;
+            // Send user information and preferences to OpenAI API and get response
+            string chatResponse = await _openAIService.GetMealPlan(userInfos);
 
-            chat.AppendSystemMessage($"As an AI trained to provide meal planning assistance, you have been given the following user information and preferences in the following json object called 'userInput':\n{userInfos}\nBased on this information, please generate a 7-day meal plan. The number of meals/day is the 'Meal Frequency' key in 'userInput' json object.");
-            chat.AppendUserInput($"Please, before generating the output, rewrite a summary of the user preferences");
-            chat.AppendExampleChatbotOutput($"Based on the user preferences, here is a summary:\n\nCuisine Type: {userInfos.CuisineType}\nAge: {userInfos.Age}\nGender: {userInfos.Gender}\nWeight: {userInfos.Weight} kg\nHeight: {userInfos.Height} cm\nObjective: {userInfos.Objective}\nAllergies: {userInfos.Allergies}\nCooking Skill Level: {userInfos.CookingSkillLevel}\nPreferred Ingredients: {string.Join(", ", userInfos.PreferredIngredients)}\nDietary Preferences/Restrictions: {userInfos.DietaryPreferencesRestrictions}\nHealth Conditions: {userInfos.HealthConditions}\nFood Dislikes: {userInfos.FoodDislikes}\nPreparation Time: {userInfos.PreparationTime}\nMeal Frequency: {userInfos.MealFrequency} meals/day\nNumber of People: {userInfos.NumberOfPeople}\n\nNow, I will generate a 7-day meal plan based on these preferences.");
-            chat.AppendUserInput($"Generate a json object that begins with a key named 'startFlag' with the value '#TheGenerationHasStarted' and ends with a key named 'endFlag' with the value '#TheGenerationIsFinished'. The object should contain a 7-day meal plan with each day being a separate object with keys 'Breakfast', 'Lunch', 'Dinner' and 'Snack'. Each day should consist of various meals. The JSON should follow this format: {{\"startFlag\":\"#TheGenerationHasStarted\",\"Monday\":{{\"Breakfast\":\"...\",\"Lunch\":\"...\",\"Dinner\":\"...\",\"Snack\":\"...\"}},...,\"endFlag\":\"#TheGenerationIsFinished\"}}. Please ensure that the output contains only the JSON object with no additional text before or after it.");
+            string chatResponse1 = "Here is the response :\nHere is the requested JSON object:\n\n```\n{\n  \"startFlag\": \"#TheGenerationHasStarted\",\n  \"Monday\": {\n    \"Breakfast\": \"Egg and Spinach Breakfast Sandwich\",\n    \"Lunch\": \"Chicken and Pasta Salad\",\n    \"Dinner\": \"Italian Stuffed Peppers\",\n    \"Snack\": \"Apple Slices with Peanut Butter\"\n  },\n  \"Tuesday\": {\n    \"Breakfast\": \"Blueberry Oatmeal\",\n    \"Lunch\": \"Caprese Salad with Grilled Chicken\",\n    \"Dinner\": \"Chicken Parmesan with Zucchini Noodles\",\n    \"Snack\": \"Greek Yogurt with Berries\"\n  },\n  \"Wednesday\": {\n    \"Breakfast\": \"Avocado Toast with Poached Eggs\",\n    \"Lunch\": \"Pesto Chicken and Tomato Skewers\",\n    \"Dinner\": \"Spaghetti Squash with Meat Sauce\",\n    \"Snack\": \"Carrots and Hummus\"\n  },\n  \"Thursday\": {\n    \"Breakfast\": \"Banana and Peanut Butter Smoothie\",\n    \"Lunch\": \"Italian Chicken and Vegetable Soup\",\n    \"Dinner\": \"Baked Lemon Chicken with Roasted Vegetables\",\n    \"Snack\": \"String Cheese and Grapes\"\n  },\n  \"Friday\": {\n    \"Breakfast\": \"Yogurt and Granola Parfait\",\n    \"Lunch\": \"Chicken Caesar Wrap\",\n    \"Dinner\": \"Zucchini and Chicken Meatballs with Marinara Sauce\",\n    \"Snack\": \"Trail Mix\"\n  },\n  \"Saturday\": {\n    \"Breakfast\": \"Spinach and Feta Omelette\",\n    \"Lunch\": \"Italian Chicken and Rice Bowl\",\n    \"Dinner\": \"Grilled Chicken with Tomato and Basil Salad\",\n    \"Snack\": \"Cottage Cheese with Pineapple\"\n  },\n  \"Sunday\": {\n    \"Breakfast\": \"Whole Wheat Pancakes with Blueberries\",\n    \"Lunch\": \"Italian Chicken and Vegetable Skillet\",\n    \"Dinner\": \"Baked Cod with Lemon and Garlic\",\n    \"Snack\": \"Almond Butter and Apple Slices\"\n  },\n  \"endFlag\": \"#TheGenerationIsFinished\"\n}\n```";
 
-            var chatResponse = await chat.GetResponseFromChatbotAsync();
-            int startJson = chatResponse.IndexOf("\"startFlag\": \"#TheGenerationHasStarted\"");
-            int endJson = chatResponse.IndexOf("\"endFlag\": \"#TheGenerationIsFinished\"") + "\"endFlag\": \"#TheGenerationIsFinished\"".Length;
-
-            // Check if flags were found
-            if (startJson == -1 || endJson == -1)
-            {
-                Console.WriteLine("Could not find the startFlag or endFlag in the response.");
-            }
-
-            // Extract the JSON string
-            string jsonString = chatResponse.Substring(startJson-1, endJson - startJson);
-
-            // Deserialize the JSON string into a MealPlan object
-            var mealPlan = JsonConvert.DeserializeObject<MealPlan>(jsonString);
-
-
-            // Log the final result
-            Console.WriteLine("Meal plan created successfully! \n "+ chatResponse);
+            // Extract JSON from the response string
+            //var var = _jsonExtractorService.ExtractMealPlanFromResponse(chatResponse);
 
             // Return the final response as JSON
             return Ok(chatResponse);
-        }
-
-        private static string ExtractJson(string response)
-        {
-            int startIndex = response.IndexOf("```json\n") + 8; // Add 8 to remove "```json\n" from the start index.
-            int endIndex = response.IndexOf("```", startIndex);
-            return response.Substring(startIndex, endIndex - startIndex);
         }
 
 

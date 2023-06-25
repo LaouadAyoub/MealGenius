@@ -1,3 +1,4 @@
+using MealGeniusBackend.Services;
 using OpenAI_API;
 
 internal class Program
@@ -23,8 +24,8 @@ internal class Program
         });
         // Set the default API authentication using the environment variable
         APIAuthentication.Default = new APIAuthentication(Environment.GetEnvironmentVariable("OPENAI_API_KEY"));
-        builder.Services.AddSingleton<OpenAI_API.OpenAIAPI>();
-
+        builder.Services.AddSingleton<OpenAIAPI>();
+        builder.Services.AddScoped<IOpenAIService, OpenAIService>();
         var app = builder.Build();
 
         // Configure the HTTP request pipeline.
