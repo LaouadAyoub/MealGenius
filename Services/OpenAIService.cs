@@ -61,6 +61,7 @@ namespace MealGeniusBackend.Services
             {
                 GroceryItems = new List<GroceryItem>()
             };
+            List<string> responseList = new List<string>();
             foreach (var dayMealPlan in myWeekPlan.DayMealPlans)
             {
                 foreach (var meal in dayMealPlan.Meals)
@@ -68,30 +69,42 @@ namespace MealGeniusBackend.Services
                     var mealType = meal.MealType;
                     var mealName = meal.MealName;
 
-                    string secondPrompt = $"Forget every thing that was said before You are given a meal with the following details:\n\n" +
-                                    $"Meal Type: {mealType}\n" +
-                                    $"Meal Name: {mealName}\n\n" +
-                                    "Based on these details, please generate a JSON representation of a `PrepInstructions` object. " +
-                                    "This object should include:\n\n" +
-                                    "1. The `MealName` which is the name of the meal.\n" +
-                                    "2. A `GroceryItems` list, with each item in the list being a `GroceryItem` object. Each `GroceryItem` should have an `IngredientName`, a `Quantity` in grams, and a `Unit` which is 'g' for grams.\n" +
-                                    "3. An `Instructions` list that contains the step-by-step preparation instructions for the meal.\n\n" +
-                                    "Here are the corresponding C# classes:\n\n" +
-                                    "```csharp\n" +
-                                    "public class PrepInstructions\n" +
-                                    "{\n" +
-                                    "    public string MealName { get; set; }\n" +
-                                    "    public List<GroceryItem> GroceryItems { get; set; }\n" +
-                                    "    public List<string> Instructions { get; set; }\n" +
-                                    "}\n\n" +
-                                    "public class GroceryItem\n" +
-                                    "{\n" +
-                                    "    public string IngredientName { get; set; }\n" +
-                                    "    public double Quantity { get; set; }\n" +
-                                    "    public string Unit { get; set; }\n" +
-                                    "}\n" +
-                                    "```\n\n" +
-                                    "Please make sure the JSON follows the format of the `PrepInstructions` and `GroceryItem` C# classes and is in a compact form with no unnecessary whitespace.";
+                    string secondPrompt = $"Forget every thing that was said before. You are given a meal with the following details:\n\n" +
+                                          $"Meal Type: {mealType}\n" +
+                                          $"Meal Name: {mealName}\n\n" +
+                                          $"User Infos: {userInfos}\n\n" +
+                                          "Based on these details, please generate a JSON representation of a `PrepInstructions` object. " +
+                                          "This object should include:\n\n" +
+                                          "1. The `MealName` which is the name of the meal.\n" +
+                                          "2. A `GroceryItems` list, with each item in the list being a `GroceryItem` object. Each `GroceryItem` should have an `IngredientName`, a `Quantity` in grams, and a `Unit` which is 'g' for grams.\n" +
+                                          "3. An `Instructions` list that contains the step-by-step preparation instructions for the meal.\n" +
+                                          "4. The `Macros` for the meal, which include the `Protein`, `Carbs`, `Fats`, and `Calories`.\n\n" +
+                                          "Here are the corresponding C# classes:\n\n" +
+                                          "```csharp\n" +
+                                          "public class PrepInstructions\n" +
+                                          "{\n" +
+                                          "    public string MealName { get; set; }\n" +
+                                          "    public List<GroceryItem> GroceryItems { get; set; }\n" +
+                                          "    public List<string> Instructions { get; set; }\n" +
+                                          "    public Macros MealMacros { get; set; }\n" +
+                                          "}\n\n" +
+                                          "public class GroceryItem\n" +
+                                          "{\n" +
+                                          "    public string IngredientName { get; set; }\n" +
+                                          "    public double Quantity { get; set; }\n" +
+                                          "    public string Unit { get; set; }\n" +
+                                          "}\n\n" +
+                                          "public class Macros\n" +
+                                          "{\n" +
+                                          "    public float Protein { get; set; }\n" +
+                                          "    public float Carbs { get; set; }\n" +
+                                          "    public float Fats { get; set; }\n" +
+                                          "    public int Calories { get; set; }\n" +
+                                          "}\n" +
+                                          "```\n\n" +
+                                          "Please make sure the JSON follows the format of the `PrepInstructions`, `GroceryItem`, and `Macros` C# classes and is in a compact form with no unnecessary whitespace.\n\n" +
+                                          "NOTE: Choose the meal quantities based on the information in the `UserInfos` and speciallfy the UserInfos.Number of people and the objectif of the user";
+
                     APIAuthentication.Default = new APIAuthentication(Environment.GetEnvironmentVariable("OPENAI_API_KEY"));
                     var aOpenAiAPI = new OpenAIAPI();
                     var aChat = CreateConversation(aOpenAiAPI);
@@ -107,24 +120,16 @@ namespace MealGeniusBackend.Services
                 // Get the result from the task
                 var response2 = task.Result;
                 var jsonResonse2 = ProcessResponse(response2);
+                responseList.Add(jsonResonse2);
                 PrepInstructions myPrepInstructions = JsonSerializer.Deserialize<PrepInstructions>(jsonResonse2);
                 // Add the new PrepInstructions to the list
                 prepInstructionsList.Add(myPrepInstructions);
             }
-            //foreach (var prepInstructions in prepInstructionsList)
-            //{
-            //    if (prepInstructions.GroceryItems != null)
-            //    {
-            //        totalGroceryList.GroceryItems.AddRange(prepInstructions.GroceryItems);
-            //    }
-            //}
-
-
-
+            
             var weekPlanUI = CreateWeekPlanUI(myWeekPlan, prepInstructionsList);
             var jsonWeekPlanUI = JsonSerializer.Serialize(weekPlanUI);
-
-            Console.WriteLine("WeekPlan_UI in JSON format: " + jsonWeekPlanUI);
+            Console.WriteLine("Response list " + responseList.ToString());
+           // Console.WriteLine("WeekPlan_UI in JSON format: " + jsonWeekPlanUI);
 
             return jsonWeekPlanUI;
         }
@@ -155,7 +160,8 @@ namespace MealGeniusBackend.Services
                             MealType = meal.MealType,
                             MealName = meal.MealName,
                             GroceryItems = prepInstruction.GroceryItems,
-                            Instructions = prepInstruction.Instructions
+                            Instructions = prepInstruction.Instructions,
+                            MealMacros = prepInstruction.MealMacros
                         };
 
                         dayMealPlanUI.Meals.Add(mealUI);

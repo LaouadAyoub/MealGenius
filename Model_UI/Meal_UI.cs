@@ -8,5 +8,7 @@ namespace MealGeniusBackend.Model_UI
         public string MealName { get; set; }
         public List<GroceryItem> GroceryItems { get; set; }
         public List<string> Instructions { get; set; }
+
+        public Macros MealMacros { get; set; }
     }
 }

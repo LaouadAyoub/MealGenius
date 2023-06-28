@@ -17,7 +17,7 @@
         public string PreparationTime { get; set; }
         public int MealFrequency { get; set; }
         public int NumberOfPeople { get; set; }
-
+        public string Unit { get; set; }
         public string UserComments { get; set; }
     }
 }
