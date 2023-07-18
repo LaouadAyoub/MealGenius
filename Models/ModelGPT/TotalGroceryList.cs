@@ -1,4 +1,4 @@
-﻿namespace MealGeniusBackend.ModelGPT
+﻿namespace MealGeniusBackend.Models.ModelGPT
 {
     public class TotalGroceryList
     {

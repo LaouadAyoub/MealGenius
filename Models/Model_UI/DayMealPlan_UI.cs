@@ -1,4 +1,6 @@
-﻿namespace MealGeniusBackend.Model_UI
+﻿using MealGeniusBackend.Model_UI;
+
+namespace MealGeniusBackend.Models.Model_UI
 {
     public class DayMealPlan_UI
     {

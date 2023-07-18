@@ -1,4 +1,4 @@
-﻿namespace MealGeniusBackend.Model_UI
+﻿namespace MealGeniusBackend.Models.Model_UI
 {
     public class WeekPlan_UI
     {

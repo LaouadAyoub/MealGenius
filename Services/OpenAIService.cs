@@ -1,7 +1,9 @@
 ﻿using MealGeniusBackend.Model_UI;
-using MealGeniusBackend.ModelGPT;
+using MealGeniusBackend.Models.Model_UI;
+using MealGeniusBackend.Models.ModelGPT;
 using OpenAI_API;
 using OpenAI_API.Chat;
+using System.Text;
 using System.Text.Json;
 
 namespace MealGeniusBackend.Services
@@ -42,6 +44,7 @@ namespace MealGeniusBackend.Services
                                 "    public string MealName { get; set; } \n" +
                                 "} \n" +
                                 "``` \n" +
+                                $"You have to generate meals based on these Infos: Cuisine Type: {userInfos.CuisineType}, Age: {userInfos.Age}, Gender: {userInfos.Gender}, Weight: {userInfos.Weight}, Height: {userInfos.Height}, Objective: {userInfos.Objective}, Allergies: {userInfos.Allergies}, Cooking Skill Level: {userInfos.CookingSkillLevel}, Preferred Ingredients: {string.Join(", ", userInfos.PreferredIngredients)}, Dietary Preferences/Restrictions: {userInfos.DietaryPreferencesRestrictions}, Health Conditions: {userInfos.HealthConditions}, Food Dislikes: {userInfos.FoodDislikes}, Preparation Time: {userInfos.PreparationTime}, Meal Frequency: {userInfos.MealFrequency}, Number Of People: {userInfos.NumberOfPeople}, Unit: {userInfos.Unit}, User Comments: {userInfos.UserComments}\n\n" +
                                 "Please generate a JSON representation of a WeekPlan object with 7 days, each having " + userInfos.MealFrequency + " meals per day. The JSON should include the names of the days and for each mealtime (e.g., \"Breakfast\", \"Lunch\", \"Dinner\", \"Snack\") a specific meal name (e.g., \"Pasta Bolognese\", \"Green Salad\"). Use a variety of meal names. \n" +
                                 "\n" +
                                 "IMPORTANT NOTE: Please return the JSON in a VERY COMPACT FORM without ANY unnecessary whitespace to minimize token usage.";
@@ -64,53 +67,58 @@ namespace MealGeniusBackend.Services
             List<string> responseList = new List<string>();
             foreach (var dayMealPlan in myWeekPlan.DayMealPlans)
             {
-                foreach (var meal in dayMealPlan.Meals)
+                StringBuilder mealDetails = new StringBuilder();
+                for (int i = 0; i < dayMealPlan.Meals.Count; i++)
                 {
-                    var mealType = meal.MealType;
-                    var mealName = meal.MealName;
-
-                    string secondPrompt = $"Forget every thing that was said before. You are given a meal with the following details:\n\n" +
-                                          $"Meal Type: {mealType}\n" +
-                                          $"Meal Name: {mealName}\n\n" +
-                                          $"User Infos: {userInfos}\n\n" +
-                                          "Based on these details, please generate a JSON representation of a `PrepInstructions` object. " +
-                                          "This object should include:\n\n" +
-                                          "1. The `MealName` which is the name of the meal.\n" +
-                                          "2. A `GroceryItems` list, with each item in the list being a `GroceryItem` object. Each `GroceryItem` should have an `IngredientName`, a `Quantity` in grams, and a `Unit` which is 'g' for grams.\n" +
-                                          "3. An `Instructions` list that contains the step-by-step preparation instructions for the meal.\n" +
-                                          "4. The `Macros` for the meal, which include the `Protein`, `Carbs`, `Fats`, and `Calories`.\n\n" +
-                                          "Here are the corresponding C# classes:\n\n" +
-                                          "```csharp\n" +
-                                          "public class PrepInstructions\n" +
-                                          "{\n" +
-                                          "    public string MealName { get; set; }\n" +
-                                          "    public List<GroceryItem> GroceryItems { get; set; }\n" +
-                                          "    public List<string> Instructions { get; set; }\n" +
-                                          "    public Macros MealMacros { get; set; }\n" +
-                                          "}\n\n" +
-                                          "public class GroceryItem\n" +
-                                          "{\n" +
-                                          "    public string IngredientName { get; set; }\n" +
-                                          "    public double Quantity { get; set; }\n" +
-                                          "    public string Unit { get; set; }\n" +
-                                          "}\n\n" +
-                                          "public class Macros\n" +
-                                          "{\n" +
-                                          "    public float Protein { get; set; }\n" +
-                                          "    public float Carbs { get; set; }\n" +
-                                          "    public float Fats { get; set; }\n" +
-                                          "    public int Calories { get; set; }\n" +
-                                          "}\n" +
-                                          "```\n\n" +
-                                          "Please make sure the JSON follows the format of the `PrepInstructions`, `GroceryItem`, and `Macros` C# classes and is in a compact form with no unnecessary whitespace.\n\n" +
-                                          "NOTE: Choose the meal quantities based on the information in the `UserInfos` and speciallfy the UserInfos.Number of people and the objectif of the user";
-
-                    APIAuthentication.Default = new APIAuthentication(Environment.GetEnvironmentVariable("OPENAI_API_KEY"));
-                    var aOpenAiAPI = new OpenAIAPI();
-                    var aChat = CreateConversation(aOpenAiAPI);
-                    aChat.AppendSystemMessage(secondPrompt);
-                    tasks.Add(GetResponseFromChatbotAsync(aChat));
+                    mealDetails.AppendLine($"Meal{i+1} name : {dayMealPlan.Meals[i].MealName}");
                 }
+                string secondPrompt = $"Forget every thing that was said before. You are given a  {dayMealPlan.Meals.Count}  meals with the following details:\n\n" +
+                mealDetails.ToString()+
+                $"User Infos: Cuisine Type: {userInfos.CuisineType}, Age: {userInfos.Age}, Gender: {userInfos.Gender}, Weight: {userInfos.Weight}kg, Height: {userInfos.Height}cm, Objective: {userInfos.Objective}, Allergies: {userInfos.Allergies}, Cooking Skill Level: {userInfos.CookingSkillLevel}, Preferred Ingredients: {string.Join(", ", userInfos.PreferredIngredients)}, Dietary Preferences/Restrictions: {userInfos.DietaryPreferencesRestrictions}, Health Conditions: {userInfos.HealthConditions}, Food Dislikes: {userInfos.FoodDislikes}, Preparation Time: {userInfos.PreparationTime}, Meal Frequency: {userInfos.MealFrequency}, Number Of People: {userInfos.NumberOfPeople}, Unit: {userInfos.Unit}, User Comments: {userInfos.UserComments}\n\n" +
+                "Based on these details, please generate a JSON representation of a `Day_PrepInstructions` object. " +
+                "This object should include:\n\n" +
+                "1. A `DayPrepInstructions` list, where each item in the list is a `PrepInstructions` object.\n" +
+                "2. Each `PrepInstructions` object should have a `MealName`, a `GroceryItems` list, an `Instructions` list, and `MealMacros`.\n" +
+                "3. The `GroceryItems` list should contain `GroceryItem` objects. Each `GroceryItem` should have an `IngredientName`, a `Quantity` in grams, and a `Unit` which is 'g' for grams.\n" +
+                "4. The `Instructions` list should contain the step-by-step preparation instructions for the meal.\n" +
+                "5. The `Macros` for the meal should include the `Protein`, `Carbs`, `Fats`, and `Calories`.\n\n" +
+                "Here are the corresponding C# classes:\n\n" +
+                "```csharp\n" +
+                "public class Day_PrepInstructions\n" +
+                "{\n" +
+                "    public List<PrepInstructions> DayPrepInstructions { get; set; }\n" +
+                "}\n\n" +
+                "public class PrepInstructions\n" +
+                "{\n" +
+                "    public string MealName { get; set; }\n" +
+                "    public List<GroceryItem> GroceryItems { get; set; }\n" +
+                "    public List<string> Instructions { get; set; }\n" +
+                "    public Macros MealMacros { get; set; }\n" +
+                "}\n\n" +
+                "public class GroceryItem\n" +
+                "{\n" +
+                "    public string IngredientName { get; set; }\n" +
+                "    public double Quantity { get; set; }\n" +
+                "    public string Unit { get; set; }\n" +
+                "}\n\n" +
+                "public class Macros\n" +
+                "{\n" +
+                "    public float Protein { get; set; }\n" +
+                "    public float Carbs { get; set; }\n" +
+                "    public float Fats { get; set; }\n" +
+                "    public int Calories { get; set; }\n" +
+                "}\n" +
+                "```\n\n" +
+                "Please make sure the JSON follows the format of the `Day_PrepInstructions`, `PrepInstructions`, `GroceryItem`, `Macros` and `UserInfos` C# classes and is in a compact form with no unnecessary whitespace.\n\n" +
+                "NOTE: Generate the `PrepInstructions` based on the user preferences specified in the `UserInfos`. Choose the meal quantities and `Macros` based on the user's `Objective`, `Weight`, `Height`, `Age`, `Gender`, `MealFrequency`, `NumberOfPeople`, and the `Unit`. Consider also the `CuisineType`, `Allergies`, `CookingSkillLevel`, `PreferredIngredients`, `DietaryPreferencesRestrictions`, `HealthConditions`, `FoodDislikes`, and `PreparationTime`.";
+
+
+                APIAuthentication.Default = new APIAuthentication(Environment.GetEnvironmentVariable("OPENAI_API_KEY"));
+                var aOpenAiAPI = new OpenAIAPI();
+                var aChat = CreateConversation(aOpenAiAPI);
+                aChat.AppendSystemMessage(secondPrompt);
+                tasks.Add(GetResponseFromChatbotAsync(aChat));
+                
             }
             // Wait for all tasks to complete
             await Task.WhenAll(tasks);
@@ -194,7 +202,7 @@ namespace MealGeniusBackend.Services
         private Conversation CreateConversation(OpenAIAPI iOpenAIAPI)
         {
             var chat = iOpenAIAPI.Chat.CreateConversation();
-            chat.RequestParameters.MaxTokens = 2000;
+            //chat.RequestParameters.MaxTokens = 2000;
             chat.RequestParameters.Temperature = 0.2;
             chat.Model = OpenAI_API.Models.Model.ChatGPTTurbo;
             return chat;
