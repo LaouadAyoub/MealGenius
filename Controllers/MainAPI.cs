@@ -7,17 +7,17 @@ namespace MealGeniusBackend.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class MainAPI : ControllerBase
+    public class MainAPIController : ControllerBase
     {
         private readonly IOpenAIService _openAIService;
 
-        public MainAPI(IOpenAIService openAIService)
+        public MainAPIController(IOpenAIService openAIService)
         {
             _openAIService = openAIService;
         }
 
+        [HttpPost("CreateMeal")]
         //[Authorize]
-        [HttpPost]
         public async Task<IActionResult> CreateMeal([FromBody] UserInfos userInfos)
         {
             // Send user information and preferences to OpenAI API and get response

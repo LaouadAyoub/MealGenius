@@ -70,6 +70,15 @@ internal class Program
 
         var app = builder.Build();
 
+
+        app.UseDefaultFiles();
+        app.UseStaticFiles();
+        app.UseCors("AllowAll");
+        app.UseRouting();
+        app.UseAuthentication();
+        app.UseAuthorization();
+        app.MapControllers();
+
         using (var scope = app.Services.CreateScope())
         {
             var seeder = scope.ServiceProvider.GetRequiredService<UserDbContextSeeder>();
@@ -81,15 +90,6 @@ internal class Program
             app.UseDeveloperExceptionPage();
         }
 
-        app.UseDefaultFiles();
-        app.UseStaticFiles();
-        app.UseRouting();
-
-        app.UseAuthentication();
-        app.UseAuthorization();
-
-        app.MapControllers();
-        app.UseCors("AllowAll");
 
 
         app.Run();
