@@ -2,9 +2,9 @@
 {
     public class MealMacros
     {
-        public int Protein { get; set; }
-        public int Carbs { get; set; }
-        public int Fats { get; set; }
-        public int Calories { get; set; }
+        public string Protein { get; set; }
+        public string Carbs { get; set; }
+        public string Fats { get; set; }
+        public string Calories { get; set; }
     }
 }
