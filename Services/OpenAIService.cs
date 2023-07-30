@@ -33,7 +33,6 @@ namespace MealGeniusBackend.Services
             {
                 _logger.LogInformation("GetMealPlan: Starting GetMealPlan");
 
-                List<Task<string>> tasks = new List<Task<string>>();
                 var chat = CreateConversation(_openAiApi);
 
                 string firstPrompt = GenerateFirstPrompt(userInfos);
@@ -41,7 +40,6 @@ namespace MealGeniusBackend.Services
                 string exampleChatbotOutput = GenerateExampleChatbotOutput(userInfos);
 
                 chat.AppendSystemMessage(systemPrompt);
-                //chat.AppendExampleChatbotOutput(exampleChatbotOutput);
                 chat.AppendUserInput(firstPrompt);
                 var firstPromptResponse = await chat.GetResponseFromChatbotAsync();
                 var firstPromptResponseJson = ProcessResponse(firstPromptResponse);
@@ -50,32 +48,23 @@ namespace MealGeniusBackend.Services
 
                 _logger.LogInformation("GetMealPlan: END OF FIRST PROMPT");
 
-                //END OF FIRST PROMPT
-
-                List<DailyRecipes> FullweekPlan = new List<DailyRecipes>();
-
-                List<string> responseList = new List<string>();
-
-                Parallel.ForEach(myWeekPlan.DayMealPlans, (dayMealPlan) =>
+                List<Task<string>> tasks = myWeekPlan.DayMealPlans.Select(dayMealPlan =>
                 {
                     StringBuilder mealDetails = GenerateMealDetails(dayMealPlan);
                     string secondPrompt = GenerateSecondPrompt(userInfos, mealDetails, dayMealPlan);
-                    tasks.Add(GetSecondPromptResponse(secondPrompt));
-                });
+                    return GetSecondPromptResponse(secondPrompt);
+                }).ToList();
 
                 // Wait for all tasks to complete
-                await Task.WhenAll(tasks);
+                var results = await Task.WhenAll(tasks);
 
-                foreach (var task in tasks)
+                List<DailyRecipes> FullweekPlan = new List<DailyRecipes>();
+
+                foreach (var result in results)
                 {
-                    // Get the result from the task
-                    var secondPromptResponse = task.Result;
-                    var secondPromptResponseJson = ProcessResponse(secondPromptResponse);
-                    responseList.Add(secondPromptResponseJson);
+                    var secondPromptResponseJson = ProcessResponse(result);
                     var dayFullMealPlan = System.Text.Json.JsonSerializer.Deserialize<DailyRecipes>(secondPromptResponseJson);
-                    // Add the new PrepInstructions to the list
                     FullweekPlan.Add(dayFullMealPlan);
-
                 }
                 _logger.LogInformation("GetMealPlan: second prompt Completed ");
 
