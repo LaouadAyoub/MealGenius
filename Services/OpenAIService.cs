@@ -378,10 +378,28 @@ namespace MealGeniusBackend.Services
                 secondPrompt.AppendLine("    public string Calories { get; set; }");
                 secondPrompt.AppendLine("}");
                 secondPrompt.AppendLine("```\n");
-                secondPrompt.AppendLine("Please make sure the JSON follows the format of the `MealRecipes`, `GroceryItem`, `MealMacros` and `UserInfos` C# classes and is in a compact form with no unnecessary whitespace.");
                 secondPrompt.AppendLine($"Please generate a JSON representation that follows the format of the `MealRecipes`,  each having {userInfos.MealFrequency} meals per day. The number of people for whom this week plan is intended is {userInfos.NumberOfPeople}. This information will be useful for determining the quantity of ingredients needed for each meal.");
-                secondPrompt.AppendLine($"Please make sure that the unit of measurement in the GroceryItem will be in the {userInfos.Unit}");
-                secondPrompt.AppendLine("NOTE: Generate the `MealRecipes` based on the user preferences specified in the `UserInfos`. Choose the meal quantities and `MealMacros` based on the user's `Objective`, `Weight`, `Height`, `Age`, `Gender`, `MealFrequency`, `NumberOfPeople`, and the `Unit`. Consider also the `CuisineType`, `Allergies`, `CookingSkillLevel`, `PreferredIngredients`, `DietaryPreferencesRestrictions`, `HealthConditions`, `FoodDislikes`, and `PreparationTime`.");
+                //secondPrompt.AppendLine($"Please make sure that the unit of measurement in the GroceryItem will be in the {userInfos.Unit}");
+                secondPrompt.AppendLine("NOTE: Please generate the `MealRecipes` based on the following user preferences: \n\n" +
+                "- `Objective`: " + userInfos.Objective + ". This should influence the total calories and macro distribution (proteins, carbohydrates, and fats) in the meal plan. For instance, if the objective is weight loss, aim for a caloric deficit. If it's muscle gain, aim for a caloric surplus with a higher protein count.\n\n" +
+                "- `Weight`: " + userInfos.Weight + ". This is important to calculate the user's caloric needs.\n\n" +
+                "- `Height`: " + userInfos.Height + ". This is used in calculating the user's Basal Metabolic Rate (BMR).\n\n" +
+                "- `Age`: " + userInfos.Age + ". Age impacts metabolism, which should be factored into the caloric needs.\n\n" +
+                "- `Gender`: " + userInfos.Gender + ". Men and women have different caloric needs, so adjust the meal plan accordingly.\n\n" +
+                "- `MealFrequency`: " + userInfos.MealFrequency + ". The total calories and macros should be divided by the number of meals the user prefers to eat each day.\n\n" +
+                "- `NumberOfPeople`: " + userInfos.NumberOfPeople + ". If more than one person will be eating the meals, adjust the ingredient quantities accordingly.\n\n" +
+                "- `Unit`: " + userInfos.Unit + ". This refers to the unit of measurement preferred by the user, and should be considered while presenting the quantities of ingredients. For certain ingredients like eggs, consider using countable units (like '1 egg') instead of mass-based units (like 'grams').\n\n" +
+                "Also, consider the following dietary preferences and restrictions:\n\n" +
+                "- `CuisineType`: " + userInfos.CuisineType + ". The meal recipes should follow the cuisine types preferred by the user.\n\n" +
+                "- `Allergies`: " + userInfos.Allergies + ". Ensure that no allergens are included in the meal recipes.\n\n" +
+                "- `CookingSkillLevel`: " + userInfos.CookingSkillLevel + ". The complexity of the recipes should match the user's cooking skill level.\n\n" +
+                "- `PreferredIngredients`: " + userInfos.PreferredIngredients + ". Try to include these ingredients in the recipes.\n\n" +
+                "- `DietaryPreferencesRestrictions`: " + userInfos.DietaryPreferencesRestrictions + ". Respect the user's dietary restrictions and preferences when generating meal recipes.\n\n" +
+                "- `HealthConditions`: " + userInfos.HealthConditions + ". Some health conditions require dietary modifications, take this into consideration.\n\n" +
+                "- `FoodDislikes`: " + userInfos.FoodDislikes + ". Avoid including these ingredients in the meal recipes.\n\n" +
+                "Please ensure all these factors are properly reflected in the generated `MealMacros` and meal recipes.");
+                secondPrompt.AppendLine("Please make sure the JSON follows the format of the `MealRecipes`, `GroceryItem`, `MealMacros` and `UserInfos` C# classes and is in a compact form with no unnecessary whitespace.");
+
 
                 string prompt = secondPrompt.ToString();
                 _logger.LogInformation("GenerateSecondPrompt: Successfully generated second prompt");

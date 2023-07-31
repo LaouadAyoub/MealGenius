@@ -2,20 +2,11 @@ version: '3.9'
 
 services:
   web:
-    container_name: mealgeniusbackend-web
-    build: .
+    image: meal-genius-full-azure
+    container_name: meal-genius
     ports:
-      - 8080:80
+      - 8080:5139
     environment:
       - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=mealGeniusDb;Username=ayoub;Password=REDACTED
       - OPENAI_API_KEY= REDACTED
-
-  db:
-    container_name: mealgeniusbackend-db
-    image: postgres:latest
-    environment:
-      - POSTGRES_USER=ayoub
-      - POSTGRES_PASSWORD=REDACTED
-      - POSTGRES_DB=mealGeniusDb
-    ports:
-      - 5433:5432
+      - REACT_APP_API_BASE_URL=http://localhost:8080
