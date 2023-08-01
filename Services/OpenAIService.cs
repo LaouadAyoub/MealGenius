@@ -33,6 +33,7 @@ namespace MealGeniusBackend.Services
             {
                 _logger.LogInformation("GetMealPlan: Starting GetMealPlan");
 
+                List<Task<string>> tasks = new List<Task<string>>();
                 var chat = CreateConversation(_openAiApi);
 
                 string firstPrompt = GenerateFirstPrompt(userInfos);
@@ -40,6 +41,7 @@ namespace MealGeniusBackend.Services
                 string exampleChatbotOutput = GenerateExampleChatbotOutput(userInfos);
 
                 chat.AppendSystemMessage(systemPrompt);
+                //chat.AppendExampleChatbotOutput(exampleChatbotOutput);
                 chat.AppendUserInput(firstPrompt);
                 var firstPromptResponse = await chat.GetResponseFromChatbotAsync();
                 var firstPromptResponseJson = ProcessResponse(firstPromptResponse);
@@ -48,22 +50,34 @@ namespace MealGeniusBackend.Services
 
                 _logger.LogInformation("GetMealPlan: END OF FIRST PROMPT");
 
-                List<Task<string>> tasks = myWeekPlan.DayMealPlans.Select(dayMealPlan =>
+                //END OF FIRST PROMPT
+
+                List<MealRecipes> FullweekPlan = new List<MealRecipes>();
+
+                List<string> responseList = new List<string>();
+
+                Parallel.ForEach(myWeekPlan.DayMealPlans, (dayMealPlan) =>
                 {
-                    StringBuilder mealDetails = GenerateMealDetails(dayMealPlan);
-                    string secondPrompt = GenerateSecondPrompt(userInfos, mealDetails, dayMealPlan);
-                    return GetSecondPromptResponse(secondPrompt);
-                }).ToList();
+                    foreach (var meal in dayMealPlan.Meals)
+                    {
+                        //StringBuilder mealDetails = GenerateMealDetails(meal); //Assuming GenerateMealDetails() can handle individual meals
+                        string secondPrompt = GenerateSecondPrompt_PRO(userInfos, meal); //Assuming GenerateSecondPrompt() can handle individual meals
+                        tasks.Add(GetSecondPromptResponse(secondPrompt));
+                    }
+                });
+
 
                 // Wait for all tasks to complete
-                var results = await Task.WhenAll(tasks);
+                await Task.WhenAll(tasks);
 
-                List<DailyRecipes> FullweekPlan = new List<DailyRecipes>();
-
-                foreach (var result in results)
+                foreach (var task in tasks)
                 {
-                    var secondPromptResponseJson = ProcessResponse(result);
-                    var dayFullMealPlan = System.Text.Json.JsonSerializer.Deserialize<DailyRecipes>(secondPromptResponseJson);
+                    // Get the result from the task
+                    var secondPromptResponse = task.Result;
+                    var secondPromptResponseJson = ProcessResponse(secondPromptResponse);
+                    responseList.Add(secondPromptResponseJson);
+                    var dayFullMealPlan = System.Text.Json.JsonSerializer.Deserialize<MealRecipes>(secondPromptResponseJson);
+                    // Add the new PrepInstructions to the list
                     FullweekPlan.Add(dayFullMealPlan);
                 }
                 _logger.LogInformation("GetMealPlan: second prompt Completed ");
@@ -80,7 +94,7 @@ namespace MealGeniusBackend.Services
         }
 
 
-        public WeekPlan_UI CreateWeekPlanUI(WeekPlan weekPlan, List<DailyRecipes> prepInstructions)
+        public WeekPlan_UI CreateWeekPlanUI(WeekPlan weekPlan, List<MealRecipes> prepInstructions)
         {
             try
             {
@@ -90,7 +104,7 @@ namespace MealGeniusBackend.Services
                     DayMealPlans = new List<DayMealPlan_UI>()
                 };
 
-                List<MealRecipes> flatList = prepInstructions.SelectMany(p => p.DayMealPlans).ToList();
+                //List<MealRecipes> flatList = prepInstructions.SelectMany(p => p.DayMealPlans).ToList();
 
                 string[] weekDays = new string[] { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday" };
 
@@ -105,7 +119,7 @@ namespace MealGeniusBackend.Services
                     dayIndex++;
                     foreach (var meal in dayMealPlan.Meals)
                     {
-                        var prepInstruction = flatList.FirstOrDefault(p => p.MealName == meal.MealName);
+                        var prepInstruction = prepInstructions.FirstOrDefault(p => p.MealName == meal.MealName);
 
                         if (prepInstruction != null)
                         {
@@ -402,6 +416,51 @@ namespace MealGeniusBackend.Services
                 throw;
             }
         }
+
+
+        private string GenerateSecondPrompt_PRO(UserInfos userInfos, Meal meal)
+        {
+            StringBuilder secondPrompt = new StringBuilder();
+
+            secondPrompt.AppendLine("You are a nutritionist assistant AI. Your task is to create a meal plan based on the user's preferences and nutritional needs. You have already been given the details of a meal. Now, you are to generate a JSON representation of a `MealRecipes` object based on this meal and the user's profile information.");
+
+            secondPrompt.AppendLine($"The meal detail is as follows:\nMealType: {meal.MealType}\nMealName: {meal.MealName}\n");
+
+            secondPrompt.AppendLine($"User Infos: Cuisine Type: {userInfos.CuisineType}, Age: {userInfos.Age}, Gender: {userInfos.Gender}, Weight: {userInfos.Weight}kg, Height: {userInfos.Height}cm, Objective: {userInfos.Objective}, Allergies: {userInfos.Allergies}, Cooking Skill Level: {userInfos.CookingSkillLevel}, Preferred Ingredients: {string.Join(", ", userInfos.PreferredIngredients)}, Dietary Preferences/Restrictions: {userInfos.DietaryPreferencesRestrictions}, Health Conditions: {userInfos.HealthConditions}, Food Dislikes: {userInfos.FoodDislikes}, Preparation Time: {userInfos.PreparationTime}, Meal Frequency: {userInfos.MealFrequency}, Number Of People: {userInfos.NumberOfPeople}, Unit: {userInfos.Unit}, User Comments: {userInfos.UserComments}");
+
+            secondPrompt.AppendLine("\nBased on these details, the `MealRecipes` object should include:");
+            secondPrompt.AppendLine("1. A `MealName` which is the name of the meal.");
+            secondPrompt.AppendLine("2. A `GroceryItems` list, where each item is an object containing an `IngredientName`, a `Quantity` in grams, and a `Unit` which is 'g' for grams.");
+            secondPrompt.AppendLine("3. An `Instructions` list, which contains the step-by-step preparation instructions for the meal.");
+            secondPrompt.AppendLine("4. The `MealMacros` which should include the `Protein`, `Carbs`, `Fats`, and `Calories` for the meal.");
+
+            secondPrompt.AppendLine("\nHere are the corresponding C# classes:\n");
+            secondPrompt.AppendLine("```csharp");
+            secondPrompt.AppendLine("public class MealRecipes");
+            secondPrompt.AppendLine("{");
+            secondPrompt.AppendLine("    public string MealName { get; set; }");
+            secondPrompt.AppendLine("    public List<GroceryItem> GroceryItems { get; set; }");
+            secondPrompt.AppendLine("    public List<string> Instructions { get; set; }");
+            secondPrompt.AppendLine("    public MealMacros MealMacros { get; set; }");
+            secondPrompt.AppendLine("}");
+            secondPrompt.AppendLine("public class GroceryItem");
+            secondPrompt.AppendLine("{");
+            secondPrompt.AppendLine("    public string IngredientName { get; set; }");
+            secondPrompt.AppendLine("    public double Quantity { get; set; }");
+            secondPrompt.AppendLine("    public string Unit { get; set; }");
+            secondPrompt.AppendLine("}");
+            secondPrompt.AppendLine("public class MealMacros");
+            secondPrompt.AppendLine("{");
+            secondPrompt.AppendLine("    public string Protein { get; set; }");
+            secondPrompt.AppendLine("    public string Carbs { get; set; }");
+            secondPrompt.AppendLine("    public string Fats { get; set; }");
+            secondPrompt.AppendLine("    public string Calories { get; set; }");
+            secondPrompt.AppendLine("}");
+            secondPrompt.AppendLine("```\n");
+
+            return secondPrompt.ToString();
+        }
+
 
         private async Task<string> GetSecondPromptResponse(string secondPrompt)
         {
