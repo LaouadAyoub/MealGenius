@@ -7,7 +7,7 @@ using OpenAI_API;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
-using MealGeniusBackend.Models.UserModel;
+//using MealGeniusBackend.Models.UserModel;
 using MealGeniusBackend.DataAccess;
 using NLog.Extensions.Logging;
 using Microsoft.AspNetCore.Hosting;

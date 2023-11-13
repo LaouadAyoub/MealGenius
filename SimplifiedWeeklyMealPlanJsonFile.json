@@ -1,0 +1,123 @@
+{
+  "DayMealPlans": [
+    {
+      "DayName": "Monday",
+      "Meals": [
+        {
+          "MealType": "meal1",
+          "MealName": "Tacos with Spicy Salsa"
+        },
+        {
+          "MealType": "meal2",
+          "MealName": "Ramen with Pork Belly"
+        },
+        {
+          "MealType": "meal3",
+          "MealName": "Okonomiyaki with Mayonnaise"
+        }
+      ]
+    },
+    {
+      "DayName": "Tuesday",
+      "Meals": [
+        {
+          "MealType": "meal1",
+          "MealName": "Paneer Tikka with Mint Chutney"
+        },
+        {
+          "MealType": "meal2",
+          "MealName": "Chiles Rellenos with Rice"
+        },
+        {
+          "MealType": "meal3",
+          "MealName": "Dal Makhani with Roti"
+        }
+      ]
+    },
+    {
+      "DayName": "Wednesday",
+      "Meals": [
+        {
+          "MealType": "meal1",
+          "MealName": "Croissant with Jam"
+        },
+        {
+          "MealType": "meal2",
+          "MealName": "Southern Fried Chicken with Biscuits"
+        },
+        {
+          "MealType": "meal3",
+          "MealName": "BBQ Ribs with Coleslaw"
+        }
+      ]
+    },
+    {
+      "DayName": "Thursday",
+      "Meals": [
+        {
+          "MealType": "meal1",
+          "MealName": "Margherita Pizza with Basil"
+        },
+        {
+          "MealType": "meal2",
+          "MealName": "Chicken Curry with Naan"
+        },
+        {
+          "MealType": "meal3",
+          "MealName": "Guacamole with Tortilla Chips"
+        }
+      ]
+    },
+    {
+      "DayName": "Friday",
+      "Meals": [
+        {
+          "MealType": "meal1",
+          "MealName": "Margherita Pizza with Basil"
+        },
+        {
+          "MealType": "meal2",
+          "MealName": "Classic Burgers with Fries"
+        },
+        {
+          "MealType": "meal3",
+          "MealName": "Tempura with Dipping Sauce"
+        }
+      ]
+    },
+    {
+      "DayName": "Saturday",
+      "Meals": [
+        {
+          "MealType": "meal1",
+          "MealName": "Kung Pao Chicken with Peanuts"
+        },
+        {
+          "MealType": "meal2",
+          "MealName": "Margherita Pizza with Basil"
+        },
+        {
+          "MealType": "meal3",
+          "MealName": "Sushi Platter with Wasabi"
+        }
+      ]
+    },
+    {
+      "DayName": "Sunday",
+      "Meals": [
+        {
+          "MealType": "meal1",
+          "MealName": "Kung Pao Chicken with Peanuts"
+        },
+        {
+          "MealType": "meal2",
+          "MealName": "Sushi Platter with Wasabi"
+        },
+        {
+          "MealType": "meal3",
+          "MealName": "Spaghetti Carbonara with Garlic Bread"
+        }
+      ]
+    }
+  ]
+}

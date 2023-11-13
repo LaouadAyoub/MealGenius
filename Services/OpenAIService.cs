@@ -12,7 +12,7 @@ namespace MealGeniusBackend.Services
 {
     public interface IOpenAIService
     {
-        Task<WeekPlan_UI> GetMealPlan(UserInfos userInfos);
+        Task<WeekPlan_UI> GetMealPlan(UserInputDataModel inputData);
     }
 
     public partial class OpenAIService : IOpenAIService
@@ -27,7 +27,7 @@ namespace MealGeniusBackend.Services
 
         }
 
-        public async Task<WeekPlan_UI> GetMealPlan(UserInfos userInfos)
+        public async Task<WeekPlan_UI> GetMealPlan(UserInputDataModel inputData)
         {
             try
             {
@@ -36,9 +36,9 @@ namespace MealGeniusBackend.Services
                 List<Task<string>> tasks = new List<Task<string>>();
                 var chat = CreateConversation(_openAiApi);
 
-                string firstPrompt = GenerateFirstPrompt(userInfos);
-                string systemPrompt = GenerateSystemPrompt(userInfos);
-                string exampleChatbotOutput = GenerateExampleChatbotOutput(userInfos);
+                string firstPrompt = GenerateFirstPrompt(inputData);
+                string systemPrompt = GenerateSystemPrompt(inputData);
+                string exampleChatbotOutput = GenerateExampleChatbotOutput(inputData);
 
                 chat.AppendSystemMessage(systemPrompt);
                 //chat.AppendExampleChatbotOutput(exampleChatbotOutput);
@@ -56,15 +56,19 @@ namespace MealGeniusBackend.Services
 
                 List<string> responseList = new List<string>();
 
-                Parallel.ForEach(myWeekPlan.DayMealPlans, (dayMealPlan) =>
+                //foreach (var dayMealPlan in myWeekPlan.DayMealPlans)
+
+                //Parallel.ForEach(myWeekPlan.DayMealPlans, (dayMealPlan) =>
+                foreach (var dayMealPlan in myWeekPlan.DayMealPlans)
                 {
                     foreach (var meal in dayMealPlan.Meals)
                     {
                         //StringBuilder mealDetails = GenerateMealDetails(meal); //Assuming GenerateMealDetails() can handle individual meals
-                        string secondPrompt = GenerateSecondPrompt_PRO(userInfos, meal); //Assuming GenerateSecondPrompt() can handle individual meals
+                        string secondPrompt = GenerateSecondPrompt_PRO(inputData, meal); //Assuming GenerateSecondPrompt() can handle individual meals
                         tasks.Add(GetSecondPromptResponse(secondPrompt));
                     }
-                });
+                }
+                //});
 
 
                 // Wait for all tasks to complete
@@ -187,7 +191,7 @@ namespace MealGeniusBackend.Services
         }
 
 
-        private string GenerateFirstPrompt(UserInfos userInfos)
+        private string GenerateFirstPrompt(UserInputDataModel userInfos)
         {
             _logger.LogInformation("GenerateFirstPrompt: Starting first prompt generation");
             try
@@ -230,7 +234,7 @@ namespace MealGeniusBackend.Services
             }
         }
 
-        private string GenerateSystemPrompt(UserInfos userInfos)
+        private string GenerateSystemPrompt(UserInputDataModel inputData)
         {
             _logger.LogInformation("GenerateSystemPrompt: Starting system prompt generation");
             try
@@ -242,24 +246,24 @@ namespace MealGeniusBackend.Services
                 systemPrompt.AppendLine("- `DayMealPlan`, which represents a daily meal plan and contains `Meal` objects.");
                 systemPrompt.AppendLine("- `Meal`, which represents a single meal and contains properties for the meal type and meal name.");
                 systemPrompt.AppendLine("\nNow, based on the user's information:");
-                systemPrompt.AppendLine($"- Cuisine Type: {userInfos.CuisineType}");
-                systemPrompt.AppendLine($"- Age: {userInfos.Age}");
-                systemPrompt.AppendLine($"- Gender: {userInfos.Gender}");
-                systemPrompt.AppendLine($"- Weight: {userInfos.Weight}");
-                systemPrompt.AppendLine($"- Height: {userInfos.Height}");
-                systemPrompt.AppendLine($"- Objective: {userInfos.Objective}");
-                systemPrompt.AppendLine($"- Allergies: {userInfos.Allergies}");
-                systemPrompt.AppendLine($"- Cooking Skill Level: {userInfos.CookingSkillLevel}");
-                systemPrompt.AppendLine($"- Preferred Ingredients: {string.Join(", ", userInfos.PreferredIngredients)}");
-                systemPrompt.AppendLine($"- Dietary Preferences/Restrictions: {userInfos.DietaryPreferencesRestrictions}");
-                systemPrompt.AppendLine($"- Health Conditions: {userInfos.HealthConditions}");
-                systemPrompt.AppendLine($"- Food Dislikes: {userInfos.FoodDislikes}");
-                systemPrompt.AppendLine($"- Preparation Time: {userInfos.PreparationTime}");
-                systemPrompt.AppendLine($"- Meal Frequency: {userInfos.MealFrequency} meals/day");
-                systemPrompt.AppendLine($"- Number Of People: {userInfos.NumberOfPeople}");
-                systemPrompt.AppendLine($"- Unit: {userInfos.Unit}");
-                systemPrompt.AppendLine($"- User Comments: {userInfos.UserComments}\n");
-                systemPrompt.AppendLine($"I need to provide a 7-day meal plan with {userInfos.MealFrequency} meals per day, each with a specific meal name. The meals should align with the user's provided information and preferences.");
+                systemPrompt.AppendLine($"- Cuisine Type: {inputData.CuisineType}");
+                systemPrompt.AppendLine($"- Age: {inputData.Age}");
+                systemPrompt.AppendLine($"- Gender: {inputData.Gender}");
+                systemPrompt.AppendLine($"- Weight: {inputData.Weight}");
+                systemPrompt.AppendLine($"- Height: {inputData.Height}");
+                systemPrompt.AppendLine($"- Objective: {inputData.Objective}");
+                systemPrompt.AppendLine($"- Allergies: {inputData.Allergies}");
+                systemPrompt.AppendLine($"- Cooking Skill Level: {inputData.CookingSkillLevel}");
+                systemPrompt.AppendLine($"- Preferred Ingredients: {string.Join(", ", inputData.PreferredIngredients)}");
+                systemPrompt.AppendLine($"- Dietary Preferences/Restrictions: {inputData.DietaryPreferencesRestrictions}");
+                systemPrompt.AppendLine($"- Health Conditions: {inputData.HealthConditions}");
+                systemPrompt.AppendLine($"- Food Dislikes: {inputData.FoodDislikes}");
+                systemPrompt.AppendLine($"- Preparation Time: {inputData.PreparationTime}");
+                systemPrompt.AppendLine($"- Meal Frequency: {inputData.MealFrequency} meals/day");
+                systemPrompt.AppendLine($"- Number Of People: {inputData.NumberOfPeople}");
+                systemPrompt.AppendLine($"- Unit: {inputData.Unit}");
+                systemPrompt.AppendLine($"- User Comments: {inputData.UserComments}\n");
+                systemPrompt.AppendLine($"I need to provide a 7-day meal plan with {inputData.MealFrequency} meals per day, each with a specific meal name. The meals should align with the user's provided information and preferences.");
 
                 string prompt = systemPrompt.ToString();
                 _logger.LogInformation("GenerateSystemPrompt: Successfully generated system prompt");
@@ -274,7 +278,7 @@ namespace MealGeniusBackend.Services
             }
         }
 
-        private string GenerateExampleChatbotOutput(UserInfos userInfos)
+        private string GenerateExampleChatbotOutput(UserInputDataModel inputData)
         {
             _logger.LogInformation("GenerateExampleChatbotOutput: Starting generation of example chatbot output");
             try
@@ -286,23 +290,23 @@ namespace MealGeniusBackend.Services
 
                 // User information
                 sb.AppendLine("User Information:");
-                sb.AppendLine($"Cuisine Type: {userInfos.CuisineType}");
-                sb.AppendLine($"Age: {userInfos.Age}");
-                sb.AppendLine($"Gender: {userInfos.Gender}");
-                sb.AppendLine($"Weight: {userInfos.Weight}");
-                sb.AppendLine($"Height: {userInfos.Height}");
-                sb.AppendLine($"Objective: {userInfos.Objective}");
-                sb.AppendLine($"Allergies: {userInfos.Allergies}");
-                sb.AppendLine($"Cooking Skill Level: {userInfos.CookingSkillLevel}");
-                sb.AppendLine($"Preferred Ingredients: {string.Join(", ", userInfos.PreferredIngredients)}");
-                sb.AppendLine($"Dietary Preferences/Restrictions: {userInfos.DietaryPreferencesRestrictions}");
-                sb.AppendLine($"Health Conditions: {userInfos.HealthConditions}");
-                sb.AppendLine($"Food Dislikes: {userInfos.FoodDislikes}");
-                sb.AppendLine($"Preparation Time: {userInfos.PreparationTime}");
-                sb.AppendLine($"Meal Frequency: {userInfos.MealFrequency}");
-                sb.AppendLine($"Number Of People: {userInfos.NumberOfPeople}");
-                sb.AppendLine($"Unit: {userInfos.Unit}");
-                sb.AppendLine($"User Comments: {userInfos.UserComments}");
+                sb.AppendLine($"Cuisine Type: {inputData.CuisineType}");
+                sb.AppendLine($"Age: {inputData.Age}");
+                sb.AppendLine($"Gender: {inputData.Gender}");
+                sb.AppendLine($"Weight: {inputData.Weight}");
+                sb.AppendLine($"Height: {inputData.Height}");
+                sb.AppendLine($"Objective: {inputData.Objective}");
+                sb.AppendLine($"Allergies: {inputData.Allergies}");
+                sb.AppendLine($"Cooking Skill Level: {inputData.CookingSkillLevel}");
+                sb.AppendLine($"Preferred Ingredients: {string.Join(", ", inputData.PreferredIngredients)}");
+                sb.AppendLine($"Dietary Preferences/Restrictions: {inputData.DietaryPreferencesRestrictions}");
+                sb.AppendLine($"Health Conditions: {inputData.HealthConditions}");
+                sb.AppendLine($"Food Dislikes: {inputData.FoodDislikes}");
+                sb.AppendLine($"Preparation Time: {inputData.PreparationTime}");
+                sb.AppendLine($"Meal Frequency: {inputData.MealFrequency}");
+                sb.AppendLine($"Number Of People: {inputData.NumberOfPeople}");
+                sb.AppendLine($"Unit: {inputData.Unit}");
+                sb.AppendLine($"User Comments: {inputData.UserComments}");
 
                 // Convert the raw JSON to a nicely formatted string
                 var jsonObj = JObject.Parse(rawJson);
@@ -334,7 +338,7 @@ namespace MealGeniusBackend.Services
             return mealDetails;
         }
 
-        private string GenerateSecondPrompt(UserInfos userInfos, StringBuilder mealDetails, DayMealPlan dayMealPlan)
+        private string GenerateSecondPrompt(UserInputDataModel userInfos, StringBuilder mealDetails, DayMealPlan dayMealPlan)
         {
             _logger.LogInformation("GenerateSecondPrompt: Starting generation of second prompt");
             try
@@ -391,7 +395,7 @@ namespace MealGeniusBackend.Services
                 "- `Gender`: " + userInfos.Gender + ". Men and women have different caloric needs, so adjust the meal plan accordingly.\n\n" +
                 "- `MealFrequency`: " + userInfos.MealFrequency + ". The total calories and macros should be divided by the number of meals the user prefers to eat each day.\n\n" +
                 "- `NumberOfPeople`: " + userInfos.NumberOfPeople + ". If more than one person will be eating the meals, adjust the ingredient quantities accordingly.\n\n" +
-                "- `Unit`: " + userInfos.Unit + ". This refers to the unit of measurement preferred by the user, and should be considered while presenting the quantities of ingredients. For certain ingredients like eggs, consider using countable units (like '1 egg') instead of mass-based units (like 'grams').\n\n" +
+                "- `Unit`: " + userInfos.Unit + ". This refers to the unit of measurement preferred by the user. For certain ingredients, especially eggs, it is important to use countable units (like '1 egg', '2 eggs') instead of mass-based units (like 'grams'). Ensure that the eggs are represented as individual units, not in grams.\n\n" +
                 "Also, consider the following dietary preferences and restrictions:\n\n" +
                 "- `CuisineType`: " + userInfos.CuisineType + ". The meal recipes should follow the cuisine types preferred by the user.\n\n" +
                 "- `Allergies`: " + userInfos.Allergies + ". Ensure that no allergens are included in the meal recipes.\n\n" +
@@ -418,7 +422,7 @@ namespace MealGeniusBackend.Services
         }
 
 
-        private string GenerateSecondPrompt_PRO(UserInfos userInfos, Meal meal)
+        private string GenerateSecondPrompt_PRO(UserInputDataModel userInfos, Meal meal)
         {
             StringBuilder secondPrompt = new StringBuilder();
 
@@ -457,6 +461,28 @@ namespace MealGeniusBackend.Services
             secondPrompt.AppendLine("    public string Calories { get; set; }");
             secondPrompt.AppendLine("}");
             secondPrompt.AppendLine("```\n");
+            secondPrompt.AppendLine($"Please generate a JSON representation that follows the format of the `MealRecipes`,  each having {userInfos.MealFrequency} meals per day. The number of people for whom this week plan is intended is {userInfos.NumberOfPeople}. This information will be useful for determining the quantity of ingredients needed for each meal.");
+            //secondPrompt.AppendLine($"Please make sure that the unit of measurement in the GroceryItem will be in the {userInfos.Unit}");
+            secondPrompt.AppendLine("NOTE: Please generate the `MealRecipes` based on the following user preferences: \n\n" +
+            "- `Objective`: " + userInfos.Objective + ". This should influence the total calories and macro distribution (proteins, carbohydrates, and fats) in the meal plan. For instance, if the objective is weight loss, aim for a caloric deficit. If it's muscle gain, aim for a caloric surplus with a higher protein count.\n\n" +
+            "- `Weight`: " + userInfos.Weight + ". This is important to calculate the user's caloric needs.\n\n" +
+            "- `Height`: " + userInfos.Height + ". This is used in calculating the user's Basal Metabolic Rate (BMR).\n\n" +
+            "- `Age`: " + userInfos.Age + ". Age impacts metabolism, which should be factored into the caloric needs.\n\n" +
+            "- `Gender`: " + userInfos.Gender + ". Men and women have different caloric needs, so adjust the meal plan accordingly.\n\n" +
+            "- `MealFrequency`: " + userInfos.MealFrequency + ". The total calories and macros should be divided by the number of meals the user prefers to eat each day.\n\n" +
+            "- `NumberOfPeople`: " + userInfos.NumberOfPeople + ". If more than one person will be eating the meals, adjust the ingredient quantities accordingly.\n\n" +
+            "- `Unit`: " + userInfos.Unit + ". This refers to the unit of measurement preferred by the user, and should be considered while presenting the quantities of ingredients. For certain ingredients like eggs, consider using countable units (like '1 egg') instead of mass-based units (like 'grams').\n\n" +
+            "Also, consider the following dietary preferences and restrictions:\n\n" +
+            "- `CuisineType`: " + userInfos.CuisineType + ". The meal recipes should follow the cuisine types preferred by the user.\n\n" +
+            "- `Allergies`: " + userInfos.Allergies + ". Ensure that no allergens are included in the meal recipes.\n\n" +
+            "- `CookingSkillLevel`: " + userInfos.CookingSkillLevel + ". The complexity of the recipes should match the user's cooking skill level.\n\n" +
+            "- `PreferredIngredients`: " + userInfos.PreferredIngredients + ". Try to include these ingredients in the recipes.\n\n" +
+            "- `DietaryPreferencesRestrictions`: " + userInfos.DietaryPreferencesRestrictions + ". Respect the user's dietary restrictions and preferences when generating meal recipes.\n\n" +
+            "- `HealthConditions`: " + userInfos.HealthConditions + ". Some health conditions require dietary modifications, take this into consideration.\n\n" +
+            "- `FoodDislikes`: " + userInfos.FoodDislikes + ". Avoid including these ingredients in the meal recipes.\n\n" +
+            "Please ensure all these factors are properly reflected in the generated `MealMacros` and meal recipes.");
+            secondPrompt.AppendLine("Please make sure the JSON follows the format of the `MealRecipes`, `GroceryItem`, `MealMacros` and `UserInfos` C# classes and is in a compact form with no unnecessary whitespace.");
+
 
             return secondPrompt.ToString();
         }
@@ -465,23 +491,30 @@ namespace MealGeniusBackend.Services
         private async Task<string> GetSecondPromptResponse(string secondPrompt)
         {
             _logger.LogInformation("GetSecondPromptResponse: Starting to get response for second prompt");
-            try
+
+            for (int i = 0; i < 10; i++)
             {
-                APIAuthentication.Default = new APIAuthentication(Environment.GetEnvironmentVariable("OPENAI_API_KEY"));
-                var aOpenAiAPI = new OpenAIAPI();
-                var aChat = CreateConversation(aOpenAiAPI);
-                aChat.AppendUserInput(secondPrompt);
-                var response = await aChat.GetResponseFromChatbotAsync();
-                _logger.LogInformation("GetSecondPromptResponse: Successfully got response for second prompt");
-                _logger.LogDebug("GetSecondPromptResponse: Second prompt response: {Response}", response);
-                return response;
+                try
+                {
+                    APIAuthentication.Default = new APIAuthentication(Environment.GetEnvironmentVariable("OPENAI_API_KEY"));
+                    var aOpenAiAPI = new OpenAIAPI();
+                    var aChat = CreateConversation(aOpenAiAPI);
+                    aChat.AppendUserInput(secondPrompt);
+                    var response = await aChat.GetResponseFromChatbotAsync();
+                    _logger.LogInformation("GetSecondPromptResponse: Successfully got response for second prompt");
+                    _logger.LogDebug("GetSecondPromptResponse: Second prompt response: {Response}", response);
+                    return response;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError("GetSecondPromptResponse: An error occurred while getting response for second prompt (attempt {Attempt}): {Message}", i + 1, ex.Message);
+                    if (i == 9) throw;
+                }
             }
-            catch (Exception ex)
-            {
-                _logger.LogError("GetSecondPromptResponse: An error occurred while getting response for second prompt: {Message}", ex.Message);
-                throw;
-            }
+
+            return null; // this line should not be reached, but is required for function to compile
         }
+
 
 
     }

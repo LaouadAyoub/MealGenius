@@ -1,12 +1,24 @@
-version: '3.9'
-
+version: '3'
 services:
-  web:
-    image: meal-genius-full-azure
-    container_name: meal-genius
+  rabbitmq:
+    image: 'rabbitmq:management'
     ports:
-      - 8080:5139
+      - '5672:5672'
+      - '15672:15672'
     environment:
-      - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=mealGeniusDb;Username=ayoub;Password=REDACTED
-      - OPENAI_API_KEY= REDACTED
-      - REACT_APP_API_BASE_URL=http://localhost:8080
+      RABBITMQ_DEFAULT_USER: root
+      RABBITMQ_DEFAULT_PASS: root
+
+  postgres:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: GeniusDb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      
+volumes:
+  postgres_data:

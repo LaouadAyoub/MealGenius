@@ -1,19 +1,18 @@
 ﻿using MealGeniusBackend.DataAccess;
 using MealGeniusBackend.DataAcess;
-using MealGeniusBackend.Models.UserModel;
+//using MealGeniusBackend.Models.UserModel;
 using MealGeniusBackend.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 using NLog.Extensions.Logging;
 using OpenAI_API;
+using Stripe;
 using System.Text;
+using FluentEmail.Mailgun;
+
 
 public class Startup
 {
@@ -26,6 +25,9 @@ public class Startup
 
     public void ConfigureServices(IServiceCollection services)
     {
+        var stripeSecretKey = Environment.GetEnvironmentVariable("STRIPE_SECRET_KEY");
+        
+        StripeConfiguration.ApiKey = stripeSecretKey;
 
         services.AddControllers().AddJsonOptions(options =>
         {
@@ -49,41 +51,59 @@ public class Startup
         services.AddLogging(loggingBuilder =>
         {
             loggingBuilder.ClearProviders();
-            loggingBuilder.SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Trace);
             loggingBuilder.AddNLog();
         });
 
 
-        services.AddSingleton<OpenAIAPI>();
         services.AddScoped<IOpenAIService, OpenAIService>();
         services.AddDbContext<UserDbContext>(options =>
         options.UseNpgsql(
             Configuration.GetConnectionString("DefaultConnection")));
-
-
-        services.AddIdentity<ApplicationUser, IdentityRole>()
+        services.AddScoped<IMealPlanService, MealPlanService>();
+        services.AddScoped<IUserDashboardService, UserDashboardService>();
+        services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IUserService, UserService>();
+        services.AddHostedService<RabbitMQConsumerHostedService>();
+        services.AddSingleton<RabbitMQService>();
+        services.AddSingleton<OpenAIAPI>();
+        services.AddIdentity<IdentityUser, IdentityRole>()
                 .AddEntityFrameworkStores<UserDbContext>()
                 .AddDefaultTokenProviders();
 
-        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        // Set up FluentEmail services
+        services
+            .AddFluentEmail("redacted@example.invalid")
+            .AddMailGunSender(
+            Configuration["Mailgun:Domain"],
+            Configuration["Mailgun:ApiKey"]
+        );
+        services.AddScoped<IEmailService, EmailService>();
+
+
+        services.AddAuthentication(
+            options => 
+            {
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;            }
+            )
             .AddJwtBearer(options =>
             {
                 options.TokenValidationParameters = new TokenValidationParameters()
                 {
                     // Validate the token issuer
                     ValidateIssuer = true,
-                    ValidIssuer = Configuration["JWT:Issuer"],
+                    ValidIssuer = Configuration["JwtConfig:Issuer"],
 
                     // Validate the token audience
                     ValidateAudience = true,
-                    ValidAudience = Configuration["JWT:Audience"],
+                    ValidAudience = Configuration["JwtConfig:Audience"],
 
                     // Validate the token expiry
                     ValidateLifetime = true,
 
                     // Validate the token signing key
                     ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Configuration["JWT:Key"]))
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Configuration["JwtConfig:Key"]))
                 };
             });
         services.AddTransient<UserDbContextSeeder>();

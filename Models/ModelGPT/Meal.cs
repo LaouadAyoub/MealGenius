@@ -6,5 +6,7 @@
 
         public string MealName { get; set; }
 
+        public string Recipe { get; set; }  // <-- New property
+
     }
 }

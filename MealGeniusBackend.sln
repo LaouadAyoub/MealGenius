@@ -5,7 +5,8 @@ VisualStudioVersion = 17.5.33627.172
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MealGeniusBackend", "MealGeniusBackend.csproj", "{AFA0D644-0D2B-43B8-B241-BB2C0977DE4C}"
 EndProject
-
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BMR calculation", "..\BMR calculation\BMR calculation.csproj", "{52111D61-964C-45A9-8006-C8972995645B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -16,6 +17,10 @@ Global
 		{AFA0D644-0D2B-43B8-B241-BB2C0977DE4C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AFA0D644-0D2B-43B8-B241-BB2C0977DE4C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AFA0D644-0D2B-43B8-B241-BB2C0977DE4C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{52111D61-964C-45A9-8006-C8972995645B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{52111D61-964C-45A9-8006-C8972995645B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{52111D61-964C-45A9-8006-C8972995645B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{52111D61-964C-45A9-8006-C8972995645B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
