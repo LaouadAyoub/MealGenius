@@ -62,13 +62,13 @@ namespace MealGeniusBackend.Controllers
                 try
                 {
                     // 1. Create a new unverified user
-                    var newUser = CreateUnverifiedUser(request.Email);  // This is pseudo-code. Implement this function.
+                    //var newUser = CreateUnverifiedUser(request.Email);  // This is pseudo-code. Implement this function.
 
                     // 2. Generate a verification token or code
                     var verificationToken = GenerateUniqueVerificationToken();  // This is pseudo-code. Implement this function.
 
                     // 3. Send a confirmation email with a verification link
-                    SendConfirmationEmail(newUser.Email, verificationToken);  // This is pseudo-code. Implement this function.
+                   // SendConfirmationEmail(newUser.Email, verificationToken);  // This is pseudo-code. Implement this function.
                 }
                 catch (Exception ex)
                 {
@@ -81,22 +81,22 @@ namespace MealGeniusBackend.Controllers
             return Ok(confirmedPaymentIntent.Status);
         }
 
-        private ApplicationUser CreateUnverifiedUser(string email)
-        {
-            var newUser = new ApplicationUser { };
-            //{
-            //    Email = email,
-            //    UserName = email,  // Assuming you use email as username in your system
-            //    VerificationToken = GenerateUniqueVerificationToken(),
-            //    VerificationTokenExpiration = DateTime.UtcNow.AddHours(24),  // Token valid for 24 hours
-            //    IsVerified = false
-            //};
+        //private ApplicationUser CreateUnverifiedUser(string email)
+        //{
+        //    var newUser = new ApplicationUser { };
+        //    //{
+        //    //    Email = email,
+        //    //    UserName = email,  // Assuming you use email as username in your system
+        //    //    VerificationToken = GenerateUniqueVerificationToken(),
+        //    //    VerificationTokenExpiration = DateTime.UtcNow.AddHours(24),  // Token valid for 24 hours
+        //    //    IsVerified = false
+        //    //};
 
-            //_dbContext.Users.Add(newUser);  // Assuming `_context` is an instance of `UserDbContext` available in your class
-            //_dbContext.SaveChanges();
+        //    //_dbContext.Users.Add(newUser);  // Assuming `_context` is an instance of `UserDbContext` available in your class
+        //    //_dbContext.SaveChanges();
 
-            return newUser;
-        }
+        //    return newUser;
+        //}
 
         private string GenerateUniqueVerificationToken()
         {

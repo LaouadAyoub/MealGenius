@@ -54,8 +54,8 @@ namespace MealGeniusBackend.Services
                     var mealPlanService = scope.ServiceProvider.GetRequiredService<IMealPlanService>();
                     var userDashboardService = scope.ServiceProvider.GetRequiredService<IUserDashboardService>();
 
-                    userDashboardService.GenerateUserDashboard(userTaskDTO);
-                    await mealPlanService.GenerateMealPlan(userTaskDTO);
+                    await userDashboardService.GenerateUserDashboard(userTaskDTO);
+                    //await mealPlanService.GenerateMealPlan(userTaskDTO);
                 }
 
                 Console.WriteLine($"Received: {message}");

@@ -3,7 +3,9 @@ using System;
 using MealGeniusBackend.DataAcess;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Newtonsoft.Json.Linq;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
@@ -11,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MealGeniusBackend.Migrations
 {
     [DbContext(typeof(UserDbContext))]
-    partial class UserDbContextModelSnapshot : ModelSnapshot
+    [Migration("20240102002348_FixJsonUserKeyInfosCasting")]
+    partial class FixJsonUserKeyInfosCasting
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -66,9 +70,17 @@ namespace MealGeniusBackend.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("JsonUserKeyInfos")
+                    b.Property<string>("GeneralNutritionGuide")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<string>("JsonReponse")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<JObject>("JsonUserKeyInfos")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
 
                     b.Property<string>("MacroTargets")
                         .IsRequired()
@@ -80,10 +92,6 @@ namespace MealGeniusBackend.Migrations
 
                     b.Property<Guid>("TaskId")
                         .HasColumnType("uuid");
-
-                    b.Property<string>("UserGoalsGuide")
-                        .IsRequired()
-                        .HasColumnType("text");
 
                     b.Property<string>("UserId")
                         .IsRequired()

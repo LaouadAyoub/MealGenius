@@ -1,8 +1,10 @@
 ﻿using MealGeniusBackend.DataAcess;
+using MealGeniusBackend.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
 
 namespace MealGeniusBackend.Controllers
 {
@@ -21,7 +23,7 @@ namespace MealGeniusBackend.Controllers
         }
 
 
-        [HttpGet("GetMealPlan")]
+        [HttpGet("GetMealRecipe")]
         public async Task<IActionResult> GetMealPlan()
         {
             // Get the current authenticated user
@@ -43,11 +45,12 @@ namespace MealGeniusBackend.Controllers
                 return NotFound("User Mealplan not found.");
             }
 
+            var userMealPlan = JsonConvert.DeserializeObject<UserMealsRoot>(latestMealPlan.MealPlanJson);
             // Include the username with the meal plan
             var response = new
             {
                 userName = user.UserName,
-                mealPlan = latestMealPlan.MealPlanJson
+                mealPlan = userMealPlan
             };
 
             return Ok(response);

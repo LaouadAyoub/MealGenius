@@ -12,6 +12,8 @@ using OpenAI_API;
 using Stripe;
 using System.Text;
 using FluentEmail.Mailgun;
+using Microsoft.OpenApi.Models;
+using System.Reflection;
 
 
 public class Startup
@@ -59,6 +61,7 @@ public class Startup
         services.AddDbContext<UserDbContext>(options =>
         options.UseNpgsql(
             Configuration.GetConnectionString("DefaultConnection")));
+
         services.AddScoped<IMealPlanService, MealPlanService>();
         services.AddScoped<IUserDashboardService, UserDashboardService>();
         services.AddScoped<IAuthService, AuthService>();
@@ -78,6 +81,15 @@ public class Startup
             Configuration["Mailgun:ApiKey"]
         );
         services.AddScoped<IEmailService, EmailService>();
+
+        services.AddSwaggerGen(c =>
+        {
+            c.SwaggerDoc("v1", new OpenApiInfo { Title = "MealGenius", Version = "v1" });
+
+            var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+            var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+            c.IncludeXmlComments(xmlPath);
+        });
 
 
         services.AddAuthentication(
@@ -122,6 +134,12 @@ public class Startup
         app.UseRouting();
         app.UseAuthentication();
         app.UseAuthorization();
+        app.UseSwagger();
+        app.UseSwaggerUI(c =>
+        {
+            c.SwaggerEndpoint("/swagger/v1/swagger.json", "MealGenius Swagger");
+        });
+
         app.UseEndpoints(endpoints =>
         {
             endpoints.MapControllers();

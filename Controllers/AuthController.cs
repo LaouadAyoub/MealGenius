@@ -5,6 +5,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace MealGeniusBackend.Controllers
 {
+    /// <summary>
+    /// AuthController
+    /// </summary>
     [ApiController]
     [Route("[controller]")]
     public class AuthController : Controller
@@ -17,6 +20,12 @@ namespace MealGeniusBackend.Controllers
             _userManager = userManager;
             _authService = authService;
         }
+
+        /// <summary>
+        /// Logs in a user with their credentials.
+        /// </summary>
+        /// <param name="loginModel">The login details.</param>
+        /// <returns>A token if login is successful; otherwise, an error message.</returns>
 
         [HttpPost("Login")]
         public async Task<IActionResult> Login(UserLoginDto userLoginDto)

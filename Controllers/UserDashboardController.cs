@@ -1,8 +1,10 @@
 ﻿using MealGeniusBackend.DataAcess;
+using MealGeniusBackend.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
 
 namespace MealGeniusBackend.Controllers
 {
@@ -40,15 +42,48 @@ namespace MealGeniusBackend.Controllers
                 return NotFound("User dashboard not found.");
             }
 
+            object userJsonUserKeyInfos;
+            try
+            {
+                userJsonUserKeyInfos = JsonConvert.DeserializeObject<NutritionData>(userDashboard.JsonUserKeyInfos);
+            }
+            catch (JsonException)
+            {
+                // If deserialization fails, revert to the original JSON string
+                userJsonUserKeyInfos = userDashboard.JsonUserKeyInfos;
+            }
+
             return Ok(new
             {
-                UserDetails = userDashboard.UserDetails,
-                SummarySection = userDashboard.SummarySection,
-                BmrInitialContent = userDashboard.BmrInitialContent,
-                BmrExpandedText = userDashboard.BmrExpandedText,
-                CaloricNeedsInitialContent = userDashboard.CaloricNeedsInitialContent,
-                CaloricNeedsExpandedText = userDashboard.CaloricNeedsExpandedText
+                userGoalsGuide = userDashboard.UserGoalsGuide,
+                MacroTargets = userDashboard.MacroTargets,
+                MicroGuide = userDashboard.MicroGuide,
+                WaterIntake = userDashboard.WaterIntake,
+                // Return either the deserialized object or the original JSON string
+                JsonUserKeyInfos = userJsonUserKeyInfos
             });
+
         }
+    }
+    public class NutritionData
+    {
+        public string BMR { get; set; }
+        public string TotalCaloricNeed { get; set; }
+        public string WaterIntake { get; set; }
+        public List<string> EssentialMicronutrients { get; set; }
+        public MacronutrientRatio MacronutrientRatio { get; set; }
+    }
+
+    public class MacronutrientRatio
+    {
+        public Macronutrient Protein { get; set; }
+        public Macronutrient Fats { get; set; }
+        public Macronutrient Carbohydrates { get; set; }
+    }
+
+    public class Macronutrient
+    {
+        public string Grams { get; set; }
+        public string Percentage { get; set; }
     }
 }

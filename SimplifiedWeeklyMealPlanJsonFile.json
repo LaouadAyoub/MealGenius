@@ -5,15 +5,18 @@
       "Meals": [
         {
           "MealType": "meal1",
-          "MealName": "Tacos with Spicy Salsa"
+          "MealName": "Tacos with Spicy Salsa",
+          "MealImage": "C:\\persoProjects\\MealPlanner\\MealgeniusFull\\MealGenius_ui\\mealsImages\\Tacos with Spicy Salsa.png"
         },
         {
           "MealType": "meal2",
-          "MealName": "Ramen with Pork Belly"
+          "MealName": "Ramen with Pork Belly",
+          "MealImage": "C:\\persoProjects\\MealPlanner\\MealgeniusFull\\MealGenius_ui\\mealsImages\\Ramen with Pork Belly.png"
         },
         {
           "MealType": "meal3",
-          "MealName": "Okonomiyaki with Mayonnaise"
+          "MealName": "Okonomiyaki with Mayonnaise",
+          "MealImage": "C:\\persoProjects\\MealPlanner\\MealgeniusFull\\MealGenius_ui\\mealsImages\\Okonomiyaki with Mayonnaise.png"
         }
       ]
     },
@@ -22,15 +25,18 @@
       "Meals": [
         {
           "MealType": "meal1",
-          "MealName": "Paneer Tikka with Mint Chutney"
+          "MealName": "Paneer Tikka with Mint Chutney",
+          "MealImage": "C:\\persoProjects\\MealPlanner\\MealgeniusFull\\MealGenius_ui\\mealsImages\\Paneer Tikka with Mint Chutney.png"
         },
         {
           "MealType": "meal2",
-          "MealName": "Chiles Rellenos with Rice"
+          "MealName": "Chiles Rellenos with Rice",
+          "MealImage": "C:\\persoProjects\\MealPlanner\\MealgeniusFull\\MealGenius_ui\\mealsImages\\Chiles Rellenos with Rice.png"
         },
         {
           "MealType": "meal3",
-          "MealName": "Dal Makhani with Roti"
+          "MealName": "Dal Makhani with Roti",
+          "MealImage": "C:\\persoProjects\\MealPlanner\\MealgeniusFull\\MealGenius_ui\\mealsImages\\Dal Makhani with Roti.png"
         }
       ]
     },
@@ -39,15 +45,18 @@
       "Meals": [
         {
           "MealType": "meal1",
-          "MealName": "Croissant with Jam"
+          "MealName": "Croissant with Jam",
+          "MealImage": "C:\\persoProjects\\MealPlanner\\MealgeniusFull\\MealGenius_ui\\mealsImages\\Croissant with Jam.png"
         },
         {
           "MealType": "meal2",
-          "MealName": "Southern Fried Chicken with Biscuits"
+          "MealName": "Southern Fried Chicken with Biscuits",
+          "MealImage": "C:\\persoProjects\\MealPlanner\\MealgeniusFull\\MealGenius_ui\\mealsImages\\Southern Fried Chicken with Biscuits.png"
         },
         {
           "MealType": "meal3",
-          "MealName": "BBQ Ribs with Coleslaw"
+          "MealName": "BBQ Ribs with Coleslaw",
+          "MealImage": "C:\\persoProjects\\MealPlanner\\MealgeniusFull\\MealGenius_ui\\mealsImages\\BBQ Ribs with Coleslaw.png"
         }
       ]
     },
@@ -56,15 +65,18 @@
       "Meals": [
         {
           "MealType": "meal1",
-          "MealName": "Margherita Pizza with Basil"
+          "MealName": "Margherita Pizza with Basil",
+          "MealImage": "C:\\persoProjects\\MealPlanner\\MealgeniusFull\\MealGenius_ui\\mealsImages\\Margherita Pizza with Basil.png"
         },
         {
           "MealType": "meal2",
-          "MealName": "Chicken Curry with Naan"
+          "MealName": "Chicken Curry with Naan",
+          "MealImage": "C:\\persoProjects\\MealPlanner\\MealgeniusFull\\MealGenius_ui\\mealsImages\\Chicken Curry with Naan.png"
         },
         {
           "MealType": "meal3",
-          "MealName": "Guacamole with Tortilla Chips"
+          "MealName": "Guacamole with Tortilla Chips",
+          "MealImage": "C:\\persoProjects\\MealPlanner\\MealgeniusFull\\MealGenius_ui\\mealsImages\\Guacamole with Tortilla Chips.png"
         }
       ]
     },
@@ -73,15 +85,18 @@
       "Meals": [
         {
           "MealType": "meal1",
-          "MealName": "Margherita Pizza with Basil"
+          "MealName": "Margherita Pizza with Basil",
+          "MealImage": "C:\\persoProjects\\MealPlanner\\MealgeniusFull\\MealGenius_ui\\mealsImages\\Margherita Pizza with Basil.png"
         },
         {
           "MealType": "meal2",
-          "MealName": "Classic Burgers with Fries"
+          "MealName": "Classic Burgers with Fries",
+          "MealImage": "C:\\persoProjects\\MealPlanner\\MealgeniusFull\\MealGenius_ui\\mealsImages\\Classic Burgers with Fries.png"
         },
         {
           "MealType": "meal3",
-          "MealName": "Tempura with Dipping Sauce"
+          "MealName": "Tempura with Dipping Sauce",
+          "MealImage": "C:\\persoProjects\\MealPlanner\\MealgeniusFull\\MealGenius_ui\\mealsImages\\Tempura with Dipping Sauce.png"
         }
       ]
     },
@@ -90,15 +105,18 @@
       "Meals": [
         {
           "MealType": "meal1",
-          "MealName": "Kung Pao Chicken with Peanuts"
+          "MealName": "Kung Pao Chicken with Peanuts",
+          "MealImage": "C:\\persoProjects\\MealPlanner\\MealgeniusFull\\MealGenius_ui\\mealsImages\\Kung Pao Chicken with Peanuts.png"
         },
         {
           "MealType": "meal2",
-          "MealName": "Margherita Pizza with Basil"
+          "MealName": "Margherita Pizza with Basil",
+          "MealImage": "C:\\persoProjects\\MealPlanner\\MealgeniusFull\\MealGenius_ui\\mealsImages\\Margherita Pizza with Basil.png"
         },
         {
           "MealType": "meal3",
-          "MealName": "Sushi Platter with Wasabi"
+          "MealName": "Sushi Platter with Wasabi",
+          "MealImage": "C:\\persoProjects\\MealPlanner\\MealgeniusFull\\MealGenius_ui\\mealsImages\\Sushi Platter with Wasabi.png"
         }
       ]
     },
@@ -107,15 +125,18 @@
       "Meals": [
         {
           "MealType": "meal1",
-          "MealName": "Kung Pao Chicken with Peanuts"
+          "MealName": "Kung Pao Chicken with Peanuts",
+          "MealImage": "C:\\persoProjects\\MealPlanner\\MealgeniusFull\\MealGenius_ui\\mealsImages\\Kung Pao Chicken with Peanuts.png"
         },
         {
           "MealType": "meal2",
-          "MealName": "Sushi Platter with Wasabi"
+          "MealName": "Sushi Platter with Wasabi",
+          "MealImage": "C:\\persoProjects\\MealPlanner\\MealgeniusFull\\MealGenius_ui\\mealsImages\\Sushi Platter with Wasabi.png"
         },
         {
           "MealType": "meal3",
-          "MealName": "Spaghetti Carbonara with Garlic Bread"
+          "MealName": "Spaghetti Carbonara with Garlic Bread",
+          "MealImage": "C:\\persoProjects\\MealPlanner\\MealgeniusFull\\MealGenius_ui\\mealsImages\\Spaghetti Carbonara with Garlic Bread.png"
         }
       ]
     }

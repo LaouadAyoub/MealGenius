@@ -1,4 +1,4 @@
-﻿using MealGeniusBackend.DataAcess;
+﻿    using MealGeniusBackend.DataAcess;
 using MealGeniusBackend.Models.ModelGPT;
 using MealGeniusBackend.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -50,11 +50,11 @@ namespace MealGeniusBackend.Controllers
             }
 
             // User created, send confirmation email
-            var confirmationToken = await _userManager.GenerateEmailConfirmationTokenAsync(createResult.User);
-            var confirmationLink = Url.Action(nameof(ConfirmEmail), "MainAPI",
-                                        new { userId = createResult.User.Id, token = confirmationToken },
-                                        Request.Scheme);
-            await _emailService.SendConfirmationEmail(createResult.User.Email, confirmationLink);
+            //var confirmationToken = await _userManager.GenerateEmailConfirmationTokenAsync(createResult.User);
+            //var confirmationLink = Url.Action(nameof(ConfirmEmail), "MainAPI",
+            //                            new { userId = createResult.User.Id, token = confirmationToken },
+            //                            Request.Scheme);
+            //await _emailService.SendConfirmationEmail(createResult.User.Email, confirmationLink);
 
 
             // Create and save UserTask

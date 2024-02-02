@@ -3,6 +3,7 @@ using System;
 using MealGeniusBackend.DataAcess;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MealGeniusBackend.Migrations
 {
     [DbContext(typeof(UserDbContext))]
-    partial class UserDbContextModelSnapshot : ModelSnapshot
+    [Migration("20240102004437_removeJsonb")]
+    partial class removeJsonb
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -66,6 +69,10 @@ namespace MealGeniusBackend.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("GeneralNutritionGuide")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("JsonUserKeyInfos")
                         .IsRequired()
                         .HasColumnType("text");
@@ -80,10 +87,6 @@ namespace MealGeniusBackend.Migrations
 
                     b.Property<Guid>("TaskId")
                         .HasColumnType("uuid");
-
-                    b.Property<string>("UserGoalsGuide")
-                        .IsRequired()
-                        .HasColumnType("text");
 
                     b.Property<string>("UserId")
                         .IsRequired()

@@ -31,7 +31,7 @@ namespace MealGeniusBackend.Services
         {
             try
             {
-                _logger.LogInformation("GetMealPlan: Starting GetMealPlan");
+                _logger.LogInformation("GetMealRecipe: Starting GetMealRecipe");
 
                 List<Task<string>> tasks = new List<Task<string>>();
                 var chat = CreateConversation(_openAiApi);
@@ -48,7 +48,7 @@ namespace MealGeniusBackend.Services
 
                 WeekPlan myWeekPlan = System.Text.Json.JsonSerializer.Deserialize<WeekPlan>(firstPromptResponseJson);
 
-                _logger.LogInformation("GetMealPlan: END OF FIRST PROMPT");
+                _logger.LogInformation("GetMealRecipe: END OF FIRST PROMPT");
 
                 //END OF FIRST PROMPT
 
@@ -84,7 +84,7 @@ namespace MealGeniusBackend.Services
                     // Add the new PrepInstructions to the list
                     FullweekPlan.Add(dayFullMealPlan);
                 }
-                _logger.LogInformation("GetMealPlan: second prompt Completed ");
+                _logger.LogInformation("GetMealRecipe: second prompt Completed ");
 
                 var weekPlanUI = CreateWeekPlanUI(myWeekPlan, FullweekPlan);
 
@@ -215,7 +215,7 @@ namespace MealGeniusBackend.Services
                 firstPrompt.AppendLine("    public string MealName { get; set; }");
                 firstPrompt.AppendLine("}");
                 firstPrompt.AppendLine("```");
-                firstPrompt.AppendLine($"You have to generate meals based on these Infos: Cuisine Type: {userInfos.CuisineType}, Age: {userInfos.Age}, Gender: {userInfos.Gender}, Weight: {userInfos.Weight}, Height: {userInfos.Height}, Objective: {userInfos.Objective}, Allergies: {userInfos.Allergies}, Cooking Skill Level: {userInfos.CookingSkillLevel}, Preferred Ingredients: {string.Join(", ", userInfos.PreferredIngredients)}, Dietary Preferences/Restrictions: {userInfos.DietaryPreferencesRestrictions}, Health Conditions: {userInfos.HealthConditions}, Food Dislikes: {userInfos.FoodDislikes}, Preparation Time: {userInfos.PreparationTime}, Meal Frequency: {userInfos.MealFrequency} meals/day, Number Of People: {userInfos.NumberOfPeople}, Unit: {userInfos.Unit}, User Comments: {userInfos.UserComments}");
+                firstPrompt.AppendLine($"You have to generate meals based on these Infos: Cuisine Type: {userInfos.CuisineType}, Age: {userInfos.Age}, Gender: {userInfos.Gender}, Weight: {userInfos.Weight}, Height: {userInfos.Height}, Objective: {userInfos.Objective}, Allergies: {userInfos.Allergies}, Cooking Skill Level: {userInfos.CookingSkillLevel}, Preferred ingredients: {string.Join(", ", userInfos.PreferredIngredients)}, Dietary Preferences/Restrictions: {userInfos.DietaryPreferencesRestrictions}, Health Conditions: {userInfos.HealthConditions}, Food Dislikes: {userInfos.FoodDislikes}, Preparation Time: {userInfos.PreparationTime}, Meal Frequency: {userInfos.MealFrequency} meals/day, Number Of People: {userInfos.NumberOfPeople}, Unit: {userInfos.Unit}, User Comments: {userInfos.UserComments}");
                 firstPrompt.AppendLine("");
                 firstPrompt.AppendLine($"Please generate a JSON representation of a WeekPlan object with 7 days,  each having {userInfos.MealFrequency} meals per day. This information will be useful for determining the quantity of ingredients needed for each meal. The JSON should include the names of the days and for each mealtime (e.g., \"Breakfast\", \"Lunch\", \"Dinner\", \"Snack\") a specific meal name (e.g., \"Pasta Bolognese\", \"Green Salad\"). Use a variety of meal names.");
                 firstPrompt.AppendLine("");
@@ -254,7 +254,7 @@ namespace MealGeniusBackend.Services
                 systemPrompt.AppendLine($"- Objective: {inputData.Objective}");
                 systemPrompt.AppendLine($"- Allergies: {inputData.Allergies}");
                 systemPrompt.AppendLine($"- Cooking Skill Level: {inputData.CookingSkillLevel}");
-                systemPrompt.AppendLine($"- Preferred Ingredients: {string.Join(", ", inputData.PreferredIngredients)}");
+                systemPrompt.AppendLine($"- Preferred ingredients: {string.Join(", ", inputData.PreferredIngredients)}");
                 systemPrompt.AppendLine($"- Dietary Preferences/Restrictions: {inputData.DietaryPreferencesRestrictions}");
                 systemPrompt.AppendLine($"- Health Conditions: {inputData.HealthConditions}");
                 systemPrompt.AppendLine($"- Food Dislikes: {inputData.FoodDislikes}");
@@ -298,7 +298,7 @@ namespace MealGeniusBackend.Services
                 sb.AppendLine($"Objective: {inputData.Objective}");
                 sb.AppendLine($"Allergies: {inputData.Allergies}");
                 sb.AppendLine($"Cooking Skill Level: {inputData.CookingSkillLevel}");
-                sb.AppendLine($"Preferred Ingredients: {string.Join(", ", inputData.PreferredIngredients)}");
+                sb.AppendLine($"Preferred ingredients: {string.Join(", ", inputData.PreferredIngredients)}");
                 sb.AppendLine($"Dietary Preferences/Restrictions: {inputData.DietaryPreferencesRestrictions}");
                 sb.AppendLine($"Health Conditions: {inputData.HealthConditions}");
                 sb.AppendLine($"Food Dislikes: {inputData.FoodDislikes}");
@@ -350,7 +350,7 @@ namespace MealGeniusBackend.Services
                 secondPrompt.AppendLine($"The meal plan consists of {dayMealPlan.Meals.Count} meals with the following details:\n");
                 secondPrompt.AppendLine(mealDetails.ToString());
 
-                secondPrompt.AppendLine($"User Infos: Cuisine Type: {userInfos.CuisineType}, Age: {userInfos.Age}, Gender: {userInfos.Gender}, Weight: {userInfos.Weight}kg, Height: {userInfos.Height}cm, Objective: {userInfos.Objective}, Allergies: {userInfos.Allergies}, Cooking Skill Level: {userInfos.CookingSkillLevel}, Preferred Ingredients: {string.Join(", ", userInfos.PreferredIngredients)}, Dietary Preferences/Restrictions: {userInfos.DietaryPreferencesRestrictions}, Health Conditions: {userInfos.HealthConditions}, Food Dislikes: {userInfos.FoodDislikes}, Preparation Time: {userInfos.PreparationTime}, Meal Frequency: {userInfos.MealFrequency}, Number Of People: {userInfos.NumberOfPeople}, Unit: {userInfos.Unit}, User Comments: {userInfos.UserComments}");
+                secondPrompt.AppendLine($"User Infos: Cuisine Type: {userInfos.CuisineType}, Age: {userInfos.Age}, Gender: {userInfos.Gender}, Weight: {userInfos.Weight}kg, Height: {userInfos.Height}cm, Objective: {userInfos.Objective}, Allergies: {userInfos.Allergies}, Cooking Skill Level: {userInfos.CookingSkillLevel}, Preferred ingredients: {string.Join(", ", userInfos.PreferredIngredients)}, Dietary Preferences/Restrictions: {userInfos.DietaryPreferencesRestrictions}, Health Conditions: {userInfos.HealthConditions}, Food Dislikes: {userInfos.FoodDislikes}, Preparation Time: {userInfos.PreparationTime}, Meal Frequency: {userInfos.MealFrequency}, Number Of People: {userInfos.NumberOfPeople}, Unit: {userInfos.Unit}, User Comments: {userInfos.UserComments}");
 
                 secondPrompt.AppendLine("\nBased on these details, the `MealRecipes` object should include:");
                 secondPrompt.AppendLine("1. A `MealName` which is the name of the meal.");
@@ -430,7 +430,7 @@ namespace MealGeniusBackend.Services
 
             secondPrompt.AppendLine($"The meal detail is as follows:\nMealType: {meal.MealType}\nMealName: {meal.MealName}\n");
 
-            secondPrompt.AppendLine($"User Infos: Cuisine Type: {userInfos.CuisineType}, Age: {userInfos.Age}, Gender: {userInfos.Gender}, Weight: {userInfos.Weight}kg, Height: {userInfos.Height}cm, Objective: {userInfos.Objective}, Allergies: {userInfos.Allergies}, Cooking Skill Level: {userInfos.CookingSkillLevel}, Preferred Ingredients: {string.Join(", ", userInfos.PreferredIngredients)}, Dietary Preferences/Restrictions: {userInfos.DietaryPreferencesRestrictions}, Health Conditions: {userInfos.HealthConditions}, Food Dislikes: {userInfos.FoodDislikes}, Preparation Time: {userInfos.PreparationTime}, Meal Frequency: {userInfos.MealFrequency}, Number Of People: {userInfos.NumberOfPeople}, Unit: {userInfos.Unit}, User Comments: {userInfos.UserComments}");
+            secondPrompt.AppendLine($"User Infos: Cuisine Type: {userInfos.CuisineType}, Age: {userInfos.Age}, Gender: {userInfos.Gender}, Weight: {userInfos.Weight}kg, Height: {userInfos.Height}cm, Objective: {userInfos.Objective}, Allergies: {userInfos.Allergies}, Cooking Skill Level: {userInfos.CookingSkillLevel}, Preferred ingredients: {string.Join(", ", userInfos.PreferredIngredients)}, Dietary Preferences/Restrictions: {userInfos.DietaryPreferencesRestrictions}, Health Conditions: {userInfos.HealthConditions}, Food Dislikes: {userInfos.FoodDislikes}, Preparation Time: {userInfos.PreparationTime}, Meal Frequency: {userInfos.MealFrequency}, Number Of People: {userInfos.NumberOfPeople}, Unit: {userInfos.Unit}, User Comments: {userInfos.UserComments}");
 
             secondPrompt.AppendLine("\nBased on these details, the `MealRecipes` object should include:");
             secondPrompt.AppendLine("1. A `MealName` which is the name of the meal.");

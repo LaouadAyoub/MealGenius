@@ -1,0 +1,20 @@
+{
+  "BMR": "1500",
+  "TotalCaloricNeed": "2417",
+  "WaterIntake": "3L",
+  "EssentialMicronutrients": ["Vitamin D","Vitamin E","Calcium","Zinc","Iron"],
+  "MacronutrientRatio": {
+    "Protein": {
+      "Grams": "110",
+      "Percentage": "20"
+    },
+    "Fats": {
+      "Grams": "73",
+      "Percentage": "30"
+    },
+    "Carbohydrates": {
+      "Grams": "330",
+      "Percentage": "60"
+    }
+  }
+}

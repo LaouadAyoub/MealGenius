@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using System.ComponentModel.DataAnnotations.Schema;
+using Newtonsoft.Json.Linq;
 
 namespace MealGeniusBackend.DataAcess
 {
@@ -45,6 +46,8 @@ namespace MealGeniusBackend.DataAcess
                 .WithMany()
                 .HasForeignKey(d => d.UserId);
 
+
+
             builder.Entity<UserInput>()
                 .HasOne(i => i.User)
                 .WithMany()
@@ -63,16 +66,15 @@ namespace MealGeniusBackend.DataAcess
         public Guid Id { get; set; }
         public string UserId { get; set; }
         public Guid TaskId { get; set; }
-        public string SummarySection { get; set; }
-        public string BmrInitialContent { get; set; }
-        public string BmrExpandedText { get; set; }
-        public string CaloricNeedsInitialContent { get; set; }
-        public string CaloricNeedsExpandedText { get; set; }
-        public string UserDetails { get; set; }
-
+        public string UserGoalsGuide { get; set; }
+        public string MacroTargets { get; set; }
+        public string MicroGuide { get; set; }
+        public string WaterIntake { get; set; }
+        public string JsonUserKeyInfos { get; set; }
         public IdentityUser User { get; set; }
         public UserTask Task { get; set; }
     }
+
     public class UserTask
     {
         public Guid Id { get; set; }
