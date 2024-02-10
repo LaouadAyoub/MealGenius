@@ -4,6 +4,7 @@ using RabbitMQ.Client.Events;
 using System;
 using System.Text;
 using System.Threading.Tasks;
+using MealGeniusBackend.Models;
 using static MealGeniusBackend.Controllers.MainAPIController;
 
 namespace MealGeniusBackend.Services
@@ -13,10 +14,10 @@ namespace MealGeniusBackend.Services
     {
         private readonly IConnection _connection;
         private readonly IModel _channel;
-
+        private readonly ILogger<RabbitMQService> _logger; 
         private readonly IServiceScopeFactory _serviceScopeFactory;
 
-        public RabbitMQService(IServiceScopeFactory serviceScopeFactory)
+        public RabbitMQService(IServiceScopeFactory serviceScopeFactory, ILogger<RabbitMQService> logger)
         {
             var factory = new ConnectionFactory()
             {
@@ -30,13 +31,25 @@ namespace MealGeniusBackend.Services
             _channel.QueueDeclare(queue: "task_queue", durable: true, exclusive: false, autoDelete: false, arguments: null);
 
             _serviceScopeFactory = serviceScopeFactory;
+            _logger = logger;
+
+            _logger.LogInformation("RabbitMQ Service has been initialized.");
         }
 
         public void PublishMessageInTaskQueue(string message)
         {
-            var body = Encoding.UTF8.GetBytes(message);
-
-            _channel.BasicPublish(exchange: "", routingKey: "REDACTED", basicProperties: null, body: body);
+            try
+            {
+                var body = Encoding.UTF8.GetBytes(message);
+                
+                _channel.BasicPublish(exchange: "", routingKey: "REDACTED", basicProperties: null, body: body);
+                _logger.LogInformation($"Message published to task_queue: {message}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error publishing message to task_queue.");
+                throw; // Rethrow if you need to notify callers
+            }
         }
 
         public void ConsumeMessage()
@@ -44,21 +57,30 @@ namespace MealGeniusBackend.Services
             var consumer = new EventingBasicConsumer(_channel);
             consumer.Received += async (model, ea) =>
             {
-                var body = ea.Body.ToArray();
-                var message = Encoding.UTF8.GetString(body);
-
-                UserTaskDTO userTaskDTO = JsonConvert.DeserializeObject<UserTaskDTO>(message);
-
-                using (var scope = _serviceScopeFactory.CreateScope())
+                try
                 {
-                    var mealPlanService = scope.ServiceProvider.GetRequiredService<IMealPlanService>();
-                    var userDashboardService = scope.ServiceProvider.GetRequiredService<IUserDashboardService>();
+                    var body = ea.Body.ToArray();
+                    var message = Encoding.UTF8.GetString(body);
+                    _logger.LogInformation($"Received message: {message}");
 
-                    await userDashboardService.GenerateUserDashboard(userTaskDTO);
-                    //await mealPlanService.GenerateMealPlan(userTaskDTO);
+                    UserTaskDTO userTaskDTO = JsonConvert.DeserializeObject<UserTaskDTO>(message);
+
+                    using (var scope = _serviceScopeFactory.CreateScope())
+                    {
+                        var mealPlanService = scope.ServiceProvider.GetRequiredService<IMealPlanService>();
+                        var userDashboardService = scope.ServiceProvider.GetRequiredService<IUserDashboardService>();
+
+                        await userDashboardService.GenerateUserDashboard(userTaskDTO);
+                        await mealPlanService.GenerateMealPlan(userTaskDTO);
+
+                        _logger.LogInformation($"Processed message successfully: {message}");
+                    }
                 }
-
-                Console.WriteLine($"Received: {message}");
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error processing message.");
+                    // Consider handling the failure such as re-queuing the message or notifying an admin
+                }
             };
 
             _channel.BasicConsume(queue: "task_queue",

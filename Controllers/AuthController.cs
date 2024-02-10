@@ -1,4 +1,4 @@
-﻿using MealGeniusBackend.Models.Dto;
+﻿using MealGeniusBackend.Models;
 using MealGeniusBackend.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -22,10 +22,10 @@ namespace MealGeniusBackend.Controllers
         }
 
         /// <summary>
-        /// Logs in a user with their credentials.
+        /// Login method to authenticate user
         /// </summary>
-        /// <param name="loginModel">The login details.</param>
-        /// <returns>A token if login is successful; otherwise, an error message.</returns>
+        /// <param name="userLoginDto"></param>
+        /// <returns></returns>
 
         [HttpPost("Login")]
         public async Task<IActionResult> Login(UserLoginDto userLoginDto)

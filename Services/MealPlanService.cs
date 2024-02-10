@@ -1,17 +1,12 @@
 ﻿using MealGeniusBackend.DataAcess;
-using MealGeniusBackend.Models.Model_UI;
-using MealGeniusBackend.Models.ModelGPT;
 using Newtonsoft.Json;
 using OpenAI_API;
 using OpenAI_API.Chat;
-using System.Text;
-using System.Threading.Tasks;
-using System.Text.RegularExpressions;
-
-using static MealGeniusBackend.Controllers.MainAPIController;
-using System.Text.Json;
-using System.Net.Http.Json;
 using OpenAI_API.Images;
+using System.Text;
+using System.Text.RegularExpressions;
+using MealGeniusBackend.Models;
+using static MealGeniusBackend.Controllers.MainAPIController;
 
 namespace MealGeniusBackend.Services
 {
@@ -564,40 +559,7 @@ This structure of the json should be used consistently for different theUserMeal
             meal.Ingredients = MealData.Ingredients;
         }
 
-        static async Task<string> DownloadAndSaveImage(string imageUrl, string imageName)
-        {
-            string directoryPath = @"C:\persoProjects\MealPlanner\MealgeniusFull\MealGenius_ui\mealsImages\newUserImages";
 
-            string sanitizedImageName = SanitizeFileName(imageName);
-            string localFilePath = Path.Combine(directoryPath, sanitizedImageName + ".png");
-
-            if (!Directory.Exists(directoryPath))
-            {
-                Directory.CreateDirectory(directoryPath);
-            }
-
-            using (HttpClient client = new HttpClient())
-            {
-                HttpResponseMessage response = await client.GetAsync(imageUrl);
-                if (response.IsSuccessStatusCode)
-                {
-                    byte[] imageBytes = await response.Content.ReadAsByteArrayAsync();
-                    await File.WriteAllBytesAsync(localFilePath, imageBytes);
-                    return localFilePath; // Return the local file path
-                }
-            }
-
-            return null; // Return null if download fails
-        }
-        // Method to sanitize file names
-        static string SanitizeFileName(string fileName)
-        {
-            foreach (char c in Path.GetInvalidFileNameChars())
-            {
-                fileName = fileName.Replace(c, '_'); // Replace invalid chars with underscore
-            }
-            return fileName;
-        }
         private async Task<string> GetMealRecipe(aMeal meal)
         {
 
@@ -810,63 +772,40 @@ Start directly by the markdown header  : # The Title of the Recipe
                 throw;
             }
         }
-        private string GetMealGroceryList(string recipe)
-        {
-            var match = Regex.Match(recipe, @"ingredients.*?:\n([\s\S]*?)\n\n🍳", RegexOptions.Multiline);
 
-            if (match.Success)
+        static async Task<string> DownloadAndSaveImage(string imageUrl, string imageName)
+        {
+            string directoryPath = @"C:\persoProjects\MealPlanner\MealgeniusFull\MealGenius_ui\mealsImages\newUserImages";
+
+            string sanitizedImageName = SanitizeFileName(imageName);
+            string localFilePath = Path.Combine(directoryPath, sanitizedImageName + ".png");
+
+            if (!Directory.Exists(directoryPath))
             {
-                string ingredientsSection = match.Groups[1].Value.Trim();
-                return ingredientsSection;
+                Directory.CreateDirectory(directoryPath);
             }
-            else
+
+            using (HttpClient client = new HttpClient())
             {
-                return "ingredients not found, dude! 😬";
+                HttpResponseMessage response = await client.GetAsync(imageUrl);
+                if (response.IsSuccessStatusCode)
+                {
+                    byte[] imageBytes = await response.Content.ReadAsByteArrayAsync();
+                    await File.WriteAllBytesAsync(localFilePath, imageBytes);
+                    return localFilePath; // Return the local file path
+                }
             }
+
+            return null; // Return null if download fails
         }
-
-
-        private async Task<string> GetDailyGroceryList(string results)
+        // Method to sanitize file names
+        static string SanitizeFileName(string fileName)
         {
-
-            var chat = CreateConversation(_openAiApi);
-
-
-            string prompt = $@"{{Using the provided (results) which contains detailed grocery lists for theUserMealsRoot throughout the week, generate an aggregated and organized grocery list. The list should consolidate similar items, account for total quantities needed, and be presented in a fun, easy-to-read manner.  😎🤘```
-
-                                    This prompt should be perfect to get that grocery list organized and rockin'!   🕺🚀🎉
-                                    - 🧮 **IMPORTANT**: Add up those quantities. We don't want six separate lines for eggs, do we? 🥚🥚🥚🥚🥚🥚
-                                    - And don't forget, let your creativity run wild based on the ingredients and the user's vibes.    
-                                    Note: Please use emojis in the result for a more pleasant visual experience.Get creative with emojis to make that list pop! 🎉🔥 😊
-                                    And please use Markdown format for the result. 📝
-                                    {results}
-                                }}";
-
-            string exampleChatbotOutput = @"
-                                        # 🛒 Ayoub's Ultimate Daily Grocery List🎉
-
-                                        ### 🥩 **Meat Party:**
-
-                                        ### 🌱 **Veggie Vibes:**
-                                        ----------
-
-                                        ### 🧀 **Dairy Delights:**
-                                        --------
-                                        ### 🥚 **Eggy Essentials:**
-                                        -----
-
-                                        ### 🌰 **Condiments & Sauces:**
-                                        ------
-
-                                        ### 🌿 **Herbs & Spices:**
-                                        ------
-                                        ";
-
-            chat.AppendExampleChatbotOutput(exampleChatbotOutput);
-            chat.AppendUserInput(prompt);
-
-            var PromptResponse = await chat.GetResponseFromChatbotAsync();
-            return PromptResponse;
+            foreach (char c in Path.GetInvalidFileNameChars())
+            {
+                fileName = fileName.Replace(c, '_'); // Replace invalid chars with underscore
+            }
+            return fileName;
         }
 
     }

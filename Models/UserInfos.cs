@@ -1,4 +1,4 @@
-﻿namespace MealGeniusBackend.Models.ModelGPT
+﻿namespace MealGeniusBackend.Models
 {
     public class UserInputDataModel
     {

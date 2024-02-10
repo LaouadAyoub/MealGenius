@@ -1,5 +1,5 @@
-﻿    using MealGeniusBackend.DataAcess;
-using MealGeniusBackend.Models.ModelGPT;
+﻿using MealGeniusBackend.DataAcess;
+using MealGeniusBackend.Models;
 using MealGeniusBackend.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -15,7 +15,6 @@ namespace MealGeniusBackend.Controllers
     [ApiController]
     public class MainAPIController : ControllerBase
     {
-        private readonly IOpenAIService _openAIService;
         private readonly RabbitMQService _rabbitMQService;
         private readonly UserDbContext _dbcontext;
         private readonly UserManager<IdentityUser> _userManager;
@@ -24,10 +23,9 @@ namespace MealGeniusBackend.Controllers
         private readonly ILogger<MainAPIController> _logger;
 
 
-        public MainAPIController(IOpenAIService openAIService, RabbitMQService rabbitMQService, UserDbContext dbcontext
+        public MainAPIController(RabbitMQService rabbitMQService, UserDbContext dbcontext
             , UserManager<IdentityUser> userManager, IEmailService emailService, IUserService userService, ILogger<MainAPIController> logger)
         {
-            _openAIService = openAIService;
             _rabbitMQService = rabbitMQService;
             _userManager = userManager;
             _dbcontext = dbcontext;
@@ -45,7 +43,7 @@ namespace MealGeniusBackend.Controllers
 
             if (!createResult.Result.Succeeded)
             {
-                // we return the errors from the IdentityResult and let react handle the erros
+                // we return the errors from the IdentityResult and let react handle the errors
                 return BadRequest(createResult.Result.Errors);
             }
 
@@ -169,13 +167,6 @@ namespace MealGeniusBackend.Controllers
                 _logger.LogError(ex, "ExecuteUserTask: An exception occurred");
                 return StatusCode(StatusCodes.Status500InternalServerError, "An internal error occurred while executing the task.");
             }
-        }
-
-        public class UserTaskDTO
-        {
-            public Guid Id { get; set; }
-            public string UserId { get; set; }
-            public UserTaskStatus Status { get; set; }
         }
     }
 }

@@ -1,11 +1,11 @@
 ﻿using MealGeniusBackend.DataAcess;
-using MealGeniusBackend.Models.ModelGPT;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using OpenAI_API.Chat;
 using OpenAI_API;
 using static MealGeniusBackend.Controllers.MainAPIController;
 using Newtonsoft.Json.Linq;
+using MealGeniusBackend.Models;
 
 namespace MealGeniusBackend.Services
 {
@@ -18,13 +18,14 @@ namespace MealGeniusBackend.Services
         private readonly UserDbContext _dbContext;
         private readonly ILogger<UserDashboardService> _logger;
         private readonly OpenAIAPI _openAiApi;
+        private readonly IOpenAIService _openAIService;
 
-
-        public UserDashboardService(UserDbContext userDbContext, ILogger<UserDashboardService> logger, OpenAIAPI openAIAPI)
+        public UserDashboardService(UserDbContext userDbContext, ILogger<UserDashboardService> logger, OpenAIAPI openAIAPI, IOpenAIService openAIService)
         {
             _dbContext = userDbContext;
             _logger = logger;
             _openAiApi = openAIAPI;
+            _openAIService = openAIService;
         }
         public async Task GenerateUserDashboard(UserTaskDTO userTaskDTO)
         {
@@ -59,9 +60,6 @@ namespace MealGeniusBackend.Services
             //TODO : should i really serialise/deserialise ?
             UserInputDataModel userDataModel = JsonConvert.DeserializeObject<UserInputDataModel>(userInput.UserData);
 
-
-
-
             var dashboardInfos = await GetDashboardInfo();
 
             var existingDashboard = _dbContext.UserDashboards.SingleOrDefault(dashboard => dashboard.TaskId == userTaskDTO.Id);
@@ -76,7 +74,6 @@ namespace MealGeniusBackend.Services
             }
             else
             {
-                // 2. Generate UserDashboard info (Dummy data for now)
                 UserDashboard newDashboard = new UserDashboard
                 {
                     Id = Guid.NewGuid(),
@@ -92,16 +89,26 @@ namespace MealGeniusBackend.Services
                 // 3. Store info in UserDashboards table
                 _dbContext.UserDashboards.Add(newDashboard);
             }
-            _dbContext.SaveChanges();
+
             _logger.LogInformation($"UserDashboard generated for UserId: {userTaskDTO.UserId}");
+
+            var taskToUpdate = _dbContext.Tasks.FirstOrDefault(t => t.Id == userTaskDTO.Id);
+            if (taskToUpdate != null)
+            {
+                taskToUpdate.Status = UserTaskStatus.Completed;
+            }
+            
+            await _dbContext.SaveChangesAsync();
+            _logger.LogInformation($"UserDashboard and Task updated for UserId: {userTaskDTO.UserId}");
         }
 
         private async Task<(string MacroTargets, string JsonReponse, string MicroGuide, string WaterIntake, string UserGoalsGuide)> GetDashboardInfo()
         {
-            // ChatMacroTargets section
-            var chatMacroTargets = CreateConversationGPT4(_openAiApi);
+            try
+            {
+                // ChatMacroTargets section
 
-            string systemPrompt = @"You are an AI assistant for MealGenius, an app designed for personalized nutrition and meal planning.
+                string systemPrompt = @"You are an AI assistant for MealGenius, an app designed for personalized nutrition and meal planning.
  
                                 It focuses on setting nutritional goals and providing tailored meal plans based on user data. 
                                 The app caters to a diverse audience, including individuals with ADHD, and emphasizes informative educative content while being friendly, fun.
@@ -154,7 +161,7 @@ namespace MealGeniusBackend.Services
                                     ""budgetConstraints"": ""Moderate Budget""
                                     }
                                 }";
-            string userMacroTargetsprompt = @"
+                string userMacroTargetsprompt = @"
 This is the macrotarget section of the user. Craft an engaging markdown text that explains the Macro targets of the user, starting from the Basal Metabolic Rate (BMR) and daily caloric needs and macronutrients distribution of a user in a friendly, conversational tone, as if a nutritionist is speaking directly to them. The text should be mainly educative and informative while being fun and engaging, and provide value in an easy-to-understand format. Include these key sections:
 
 # Introduction to Your Macronutritional Targets
@@ -202,12 +209,14 @@ And finally Reassure them that MealGenius is here to support them on their journ
 
 Use emojis sparingly to keep things light and engaging. Ensure the layout is user-friendly, with bullet points for digestible reading. Bold conclusion and important informations";
 
-            chatMacroTargets.AppendSystemMessage(systemPrompt);
-            chatMacroTargets.AppendUserInput(userMacroTargetsprompt);
-            var macroTargetsPromptResponse = await chatMacroTargets.GetResponseFromChatbotAsync();
+                //var macroTargetsresponse = _openAIService.GetResponseAsync(systemPrompt, userMacroTargetsprompt, OpenAI_API.Models.Model.GPT4, 5500);
+                var chatMacroTargets = CreateConversationGPT4(_openAiApi);
+                chatMacroTargets.AppendSystemMessage(systemPrompt);
+                chatMacroTargets.AppendUserInput(userMacroTargetsprompt);
+                var macroTargetsPromptResponse = await chatMacroTargets.GetResponseFromChatbotAsync();
 
-            // Micro Guide section
-            string userMicroGuidePrompt = @"
+                // Micro Guide section
+                string userMicroGuidePrompt = @"
 This is the micronutrition guide section for the user. Your task is to generate an engaging and informative markdown text that helps the user understand the world of micronutrients, specifically vitamins and minerals, as related to their health and nutritional goals. Write in a friendly, conversational tone with a strong educational underpinning, making the content digestible and fun. Remember to use simple language and avoid medical jargon while keepint it informative. Include the following key sections:
 
 # Welcome to Your Micronutrient Map!
@@ -246,15 +255,15 @@ Use emojis sparingly throughout to maintain a light-hearted feel. Organize the c
 Note for GPT: It is important to keep the layout user-friendly and provide value in a format that is engaging and easy to understand. The information should be tailored to the user's needs and goals, with practical advice on dietary sources.
 ";
 
-            var chatMicroGuide = CreateConversationGPT4(_openAiApi);
-            chatMicroGuide.AppendSystemMessage(systemPrompt);
-            chatMicroGuide.AppendUserInput(userMicroGuidePrompt);
+                var chatMicroGuide = CreateConversationGPT4(_openAiApi);
+                chatMicroGuide.AppendSystemMessage(systemPrompt);
+                chatMicroGuide.AppendUserInput(userMicroGuidePrompt);
 
-            var microGuidePromptResponse = await chatMicroGuide.GetResponseFromChatbotAsync();
+                var microGuidePromptResponse = await chatMicroGuide.GetResponseFromChatbotAsync();
 
-            // water intake section
-            var chatWaterIntake = CreateConversationGPT4_WaterIntake_6500_Token(_openAiApi);
-            string userWaterIntakePrompt = @"
+                // water intake section
+                var chatWaterIntake = CreateConversationGPT4_WaterIntake_6500_Token(_openAiApi);
+                string userWaterIntakePrompt = @"
 Your task is to create a guide that not only informs users about the significance of hydration but also provides them with personalized insights into how much water they should be drinking daily, taking into account their activity levels, sleep patterns, and the impact of electrolytes on bodily functions.
 
 Write in a tone that is friendly, supportive, and professional, as if speaking directly to someone seeking advice from a hydration consultant. The guide's content should be both informative and enjoyable, formatted to engage a wide-ranging audience specifically ADHD people and address their specific hydration queries. Each section should begin with a simple and descriptive title, followed by content that adheres to the guidelines given below.
@@ -297,14 +306,14 @@ Conclude the guide by reassuring users that these guidelines offer a foundation 
 
 Note to AI: Present this guide with line breaks and bullet points to ensure that information is organized and easily digestible. Use simple language that can be easily understood by a global audience. The aim is to provide value in a format that is engaging, readable, and centered on the user's individual needs and goals. The finished guide should thoroughly instruct the user in a clear, concise, and friendly manner, fostering an understanding of effective hydration practices.";
 
-            chatWaterIntake.AppendSystemMessage(systemPrompt);
-            chatWaterIntake.AppendUserInput(userWaterIntakePrompt);
-            
-            var waterIntakePromptResponse = await chatWaterIntake.GetResponseFromChatbotAsync();
-            
-            // user goals guide
-            var chatUserGoalsGuide = CreateConversationGPT4(_openAiApi);
-            var UserGoalsGuideUserPrompt = @"
+                chatWaterIntake.AppendSystemMessage(systemPrompt);
+                chatWaterIntake.AppendUserInput(userWaterIntakePrompt);
+
+                var waterIntakePromptResponse = await chatWaterIntake.GetResponseFromChatbotAsync();
+
+                // user goals guide
+                var chatUserGoalsGuide = CreateConversationGPT4(_openAiApi);
+                var UserGoalsGuideUserPrompt = @"
 You're tasked with crafting a comprehensive and personalized guide that helps the user navigate through their multiple nutritional goals. 
 This guide should serve as a roadmap to support the user in making informed decisions for a balanced and healthy lifestyle. Adopt a friendly and professional tone while being fun an enjoyable, evoking the sense of a trusted nutritionist speaking directly to the user. T
 The guide should be engaging, encouraging, and straightforward, providing concise and actionable information catered to the specific goals of the user. Each goal should be discussed in its dedicated section, with simple and clear titles summarizing the focus of each part and a short description directing your writing approach.
@@ -331,15 +340,15 @@ Conclude with a section that brings together all the user's goals, reinforcing t
 Note to AI: The final guide should be neatly organized, with line breaks and bullet points where appropriate, to make the information digestible and actionable. Utilize simple yet precise language to convey the message effectively to users worldwide. The aim is to deliver a readable, inviting, and instructive guide that empowers the user to pursue and achieve their individual nutritional objectives with confidence.
 ";
 
-            chatUserGoalsGuide.AppendSystemMessage(systemPrompt);
-            chatUserGoalsGuide.AppendUserInput(UserGoalsGuideUserPrompt);
+                chatUserGoalsGuide.AppendSystemMessage(systemPrompt);
+                chatUserGoalsGuide.AppendUserInput(UserGoalsGuideUserPrompt);
 
-            var userGoalsGuidePromptResponse = await chatUserGoalsGuide.GetResponseFromChatbotAsync();
+                var userGoalsGuidePromptResponse = await chatUserGoalsGuide.GetResponseFromChatbotAsync();
 
-            // user dashboard json generation
-            string userDashboard_JsonExample = File.ReadAllText("userDashboard_JsonExample.json");
+                // user dashboard json generation
+                string userDashboard_JsonExample = File.ReadAllText("userDashboard_JsonExample.json");
 
-            string systemPromptJson = $@"You are an AI assistant for MealGenius, an app designed for personalized nutrition and meal planning.
+                string systemPromptJson = $@"You are an AI assistant for MealGenius, an app designed for personalized nutrition and meal planning.
  
 It focuses on setting nutritional goals and providing tailored meal plans based on user data. 
 The app caters to a diverse audience, including individuals with ADHD, and emphasizes informative educative content while being friendly, fun.
@@ -351,7 +360,7 @@ please find the example json below:
 {userDashboard_JsonExample}
 ";
 
-            string userPromptJson = @$"
+                string userPromptJson = @$"
     Based on this {{Markdown text}} detailing the user's Basal Metabolic Rate (BMR), daily caloric needs, water intake, and essential micronutrients, 
     generate a JSON structure that encapsulates this data. 
     The JSON should include the BMR, total caloric need, macronutrient ratio (protein, fats, and carbohydrates) in both grams and percentages, 
@@ -366,10 +375,16 @@ please find the example json below:
 ";
 
 
-            var JsonUserKeyInfos = GenerateJsonBasedOnPromptResponse(_openAiApi, systemPromptJson, userPromptJson);
+                var JsonUserKeyInfos = GenerateJsonBasedOnPromptResponse(_openAiApi, systemPromptJson, userPromptJson);
 
 
-            return (MacroTargets: macroTargetsPromptResponse, JsonReponse: JsonUserKeyInfos, MicroGuide: microGuidePromptResponse, WaterIntake: waterIntakePromptResponse, UserGoalsGuide: userGoalsGuidePromptResponse);
+                return (MacroTargets: macroTargetsPromptResponse, JsonReponse: JsonUserKeyInfos, MicroGuide: microGuidePromptResponse, WaterIntake: waterIntakePromptResponse, UserGoalsGuide: userGoalsGuidePromptResponse);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("An error occurred while generating user dashboard JSON: {Message}", ex.Message);
+                throw;
+            }
         }
 
 
