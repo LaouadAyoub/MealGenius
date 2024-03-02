@@ -56,6 +56,8 @@ jobs:
 
       - name: dotnet publish
         run: dotnet publish MealGeniusBackend.csproj -c Release -o ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+      - name: List publish directory contents
+        run: ls -R ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v3
