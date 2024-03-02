@@ -132,6 +132,7 @@ public class Startup
         services.AddSingleton<IAzureBlobService, AzureBlobService>();
 
 
+
     }
 
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
@@ -139,6 +140,10 @@ public class Startup
         if (env.IsDevelopment())
         {
             app.UseDeveloperExceptionPage();
+        }
+        else
+        {
+            app.UseHttpsRedirection(); // Redirect HTTP to HTTPS.
         }
 
         app.UseDefaultFiles();

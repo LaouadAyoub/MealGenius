@@ -34,7 +34,8 @@ internal class Program
         Host.CreateDefaultBuilder(args)
             .ConfigureWebHostDefaults(webBuilder =>
             {
-                // Default URL configuration, you can set this via environment variables or appsettings.json
-                webBuilder.UseStartup<Startup>();
+                var port = Environment.GetEnvironmentVariable("PORT") ?? "5139";
+                webBuilder.UseStartup<Startup>().UseUrls("http://*:" + port);
+
             });
 }
