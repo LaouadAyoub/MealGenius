@@ -18,22 +18,30 @@ namespace MealGeniusBackend.Services
 
         public RabbitMQService(IServiceScopeFactory serviceScopeFactory, ILogger<RabbitMQService> logger)
         {
-            var factory = new ConnectionFactory()
+            try
             {
-                HostName = Environment.GetEnvironmentVariable("RABBITMQ_HOSTNAME") ?? "localhost",
-                Port = int.TryParse(Environment.GetEnvironmentVariable("RABBITMQ_PORT"), out int port) ? port : 5672,
-                UserName = Environment.GetEnvironmentVariable("RABBITMQ_USERNAME") ?? "root",
-                Password = Environment.GetEnvironmentVariable("RABBITMQ_PASSWORD") ?? "root"
-            };
-            _connection = factory.CreateConnection();
-            _channel = _connection.CreateModel();
-            // Further queue declaration and other setup here
-            _channel.QueueDeclare(queue: "task_queue", durable: true, exclusive: false, autoDelete: false, arguments: null);
+                var factory = new ConnectionFactory()
+                {
+                    HostName = Environment.GetEnvironmentVariable("RABBITMQ_HOSTNAME") ?? "localhost",
+                    Port = int.TryParse(Environment.GetEnvironmentVariable("RABBITMQ_PORT"), out int port) ? port : 5672,
+                    UserName = Environment.GetEnvironmentVariable("RABBITMQ_USERNAME") ?? "root",
+                    Password = Environment.GetEnvironmentVariable("RABBITMQ_PASSWORD") ?? "root"
+                };
+                _connection = factory.CreateConnection();
+                _channel = _connection.CreateModel();
+                // Further queue declaration and other setup here
+                _channel.QueueDeclare(queue: "task_queue", durable: true, exclusive: false, autoDelete: false, arguments: null);
 
-            _serviceScopeFactory = serviceScopeFactory;
-            _logger = logger;
+                _serviceScopeFactory = serviceScopeFactory;
+                _logger = logger;
 
-            _logger.LogInformation("RabbitMQ Service has been initialized.");
+                _logger.LogInformation("RabbitMQ Service has been initialized.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error initializing RabbitMQ Service.");
+                throw; // Rethrow if you need to notify callers
+            }
         }
 
         public void PublishMessageInTaskQueue(string message)
