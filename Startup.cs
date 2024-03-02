@@ -26,9 +26,9 @@ public class Startup
 
     public void ConfigureServices(IServiceCollection services)
     {
-        var stripeSecretKey = Environment.GetEnvironmentVariable("STRIPE_SECRET_KEY");
+        //var stripeSecretKey = Environment.GetEnvironmentVariable("STRIPE_SECRET_KEY");
         
-        StripeConfiguration.ApiKey = stripeSecretKey;
+        //StripeConfiguration.ApiKey = stripeSecretKey;
 
         services.AddControllers().AddJsonOptions(options =>
         {
