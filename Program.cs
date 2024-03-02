@@ -30,23 +30,11 @@ internal class Program
             Logger.Error(ex, "An error occurred while running the application.");
         }
     }
-
     public static IHostBuilder CreateHostBuilder(string[] args) =>
         Host.CreateDefaultBuilder(args)
             .ConfigureWebHostDefaults(webBuilder =>
             {
-                var port = Environment.GetEnvironmentVariable("PORT");
-                if (!string.IsNullOrEmpty(port)) // Running on Heroku
-                {
-                    Logger.Info("Running on Heroku : ", port);
-                    webBuilder.UseStartup<Startup>()
-                              .UseUrls("http://*:" + port);
-                }
-                else // Running locally
-                {
-                    Logger.Info("Running locally.");
-                    webBuilder.UseStartup<Startup>()
-                              .UseUrls("http://*:5139");
-                }
+                // Default URL configuration, you can set this via environment variables or appsettings.json
+                webBuilder.UseStartup<Startup>();
             });
 }

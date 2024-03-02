@@ -1,0 +1,12 @@
+{
+  "GroceryList": {
+    "Dairy": [ "Eggs", "Greek Yogurt", "Low-fat Milk", "Shredded Cheddar Cheese", "Low-fat Mozzarella Cheese", "Parmesan Cheese" ],
+    "Vegetables": [ "Spinach", "Mixed Bell Peppers", "Broccoli", "Snap Peas", "Garlic", "Cherry Tomatoes", "Red Onion", "Cucumbers", "Shredded Carrots", "Eggplant" ],
+    "Fruits": [ "Ripe Banana", "Berries", "Mango", "Avocado" ],
+    "Grains": [ "Rolled Oats", "Whole Grain Pasta", "Whole Wheat Flour", "Whole Grain Wrap", "Whole Wheat Macaroni", "Whole Wheat Sub Roll", "Cooked Brown Rice" ],
+    "Proteins": [ "Lean Steak", "Grilled Chicken Breast", "Lean Chicken Breast", "Lean Ground Beef", "Protein Powder" ],
+    "Condiments & Others": [ "Olive Oil", "Salt", "Pepper", "Low-sodium Soy Sauce", "Cornstarch", "Chili Flakes", "Honey", "Tomato Sauce", "Protein-packed Dressing" ],
+    "Nuts_and_seeds": [ "Chia Seeds", "Nuts" ],
+    "Category_name": [ "Ingredient1", "ingredient2" ]
+  }
+}

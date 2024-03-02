@@ -1,0 +1,31 @@
+{
+  "MealDetails": {
+    "MealName": "Classic Spaghetti Carbonara",
+    "Macronutrients": {
+      "Proteins": "40g",
+      "Carbohydrates": "75g",
+      "Fats": "35g",
+      "Calories": "800kcal"
+    },
+    "Micronutrients": [ "Calcium", "Vitamin B12", "Zinc" ],
+    "ServingSize": "500g",
+    "Ingredients": [ "Spaghetti", "Egg", "Pancetta", "Pecorino Cheese", "Parmesan Cheese", "Black Pepper", "Salt", "Garlic Powder" ]
+  },
+  "MealInformation": {
+    "NameOfTheMeal": "Powerhouse Protein Smoothie Bowl",
+    "Introduction": "All the introduction with markdown format",
+    "Ingredients": "all the content of the Ingredients section, keeping it in markdown format, replace line breaks with \\n escape section",
+    "ServingText": "all the content of the Serving Size section keeping it in markdown format, replace line breaks with \\n escape section",
+    "DetailedCookingInstructions": [
+      "All the content of the step one keeping it in markdown format, replace line breaks with \\n escape section",
+      "All the text of the step two keeping it in markdown format, replace line breaks with \\n escape section",
+      "All the text of the step three keeping it in markdown format, replace line breaks with \\n escape section"
+    ],
+    "AppliancesAndTools": "all the content of the Appliances/Tools Needed section keeping it in markdown format, replace line breaks with \\n escape section",
+    "MealTimingRecommendations": "all the content of the Meal Timing Recommendations section keeping it in markdown format, replace line breaks with \\n escape section",
+    "Macronutrients_Section": "all the content of the Macronutrient Breakdown section keeping it in markdown format, replace line breaks with \\n escape section",
+    "Key_Micronutrients": "all the content of the Key Micronutrients section keeping it in markdown format, replace line breaks with \\n escape section",
+    "Health_Benefits": "all the content of the section named [Health benefits] keeping it in markdown format, replace line breaks with \\n escape section",
+    "Conclusion": "all the content of the conclusion part keeping it in markdown format"
+  }
+}

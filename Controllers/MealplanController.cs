@@ -1,5 +1,6 @@
 ﻿using MealGeniusBackend.DataAcess;
 using MealGeniusBackend.Services;
+using MealGeniusBackend.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -77,7 +78,17 @@ namespace MealGeniusBackend.Controllers
                 return NotFound("User dashboard not found.");
             }
 
-            return Ok(userGroceryList);
+            var userGroceryListJson = JsonConvert.DeserializeObject<GroceryCategoriesDetailed>(userGroceryList.GroceryListJson);
+
+            var serializerSettings = new JsonSerializerSettings
+            {
+                ContractResolver = new IgnorePropertiesResolver(new[] { "SimilarNames" })
+            };
+
+            // Serialize your object with the custom settings
+            var json = JsonConvert.SerializeObject(userGroceryListJson, serializerSettings);
+
+            return Ok(userGroceryListJson);
         }
     }
 }

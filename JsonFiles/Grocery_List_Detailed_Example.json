@@ -1,0 +1,39 @@
+{
+    "Category_Name": "The name of the category",
+    "GroceryItems": [
+      {
+        "GroceryItemName": "Name of the grocery item",
+        "SimilarNames": [ "Similar names of this grocery item", "Similar names of this grocery item" ],
+        "Benefits": "Benefits of this GroceryItem",
+        "Essential_Nutrients": [ "List the essentiel nutrients present this this GroceryItem", "Vitamin A", "Protein", "Fiber", "Omega3" ]
+      },
+      {
+        "GroceryItemName": "Greek Yogurt",
+        "SimilarNames": [ "Greek-style Yogurt", "Natural Greek Yogurt" ],
+        "Benefits": "Creamy, dreamy, and rich in probiotics, Greek yogurt is your gut's best friend. It's the superhero of snacks, battling hunger while fortifying your fortress of well-being.",
+        "Essential_Nutrients": [ "Calcium", "Protein", "Probiotics", "Vitamin B12" ]
+      },
+      {
+        "GroceryItemName": "Vanilla Protein Powder",
+        "SimilarNames": [ "Protein Powder", "Whey Protein" ],
+        "Benefits": "A twist on the classic muscle-builder, vanilla protein powder is a taste bud tantalizer that doesn't skimp on nutrition. It's like a dessert for your muscles, making gains while tickling your taste preferences.",
+        "EssentialNutrients": [
+          "Protein",
+          "Branched-Chain Amino Acids (BCAAs)",
+          "Calcium",
+          "Phosphorus"
+        ]
+      },
+      {
+        "GroceryItemName": "Banana",
+        "SimilarNames": [ "Bananas", "Ripe Banana", "Fresh Banana" ],
+        "Benefits": "Bananas are a great source of quick energy and are rich in...",
+        "EssentialNutrients": [
+          "Vitamin B6",
+          "Vitamin C",
+          "Dietary Fiber",
+          "Manganese"
+        ]
+      }
+    ]
+}
