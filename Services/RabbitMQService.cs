@@ -20,11 +20,10 @@ namespace MealGeniusBackend.Services
         {
             var factory = new ConnectionFactory()
             {
-                //HostName = "host.docker.internal",
-                HostName = "localhost",
-                Port = 5672,
-                UserName = "root",
-                Password = "root"
+                HostName = Environment.GetEnvironmentVariable("RABBITMQ_HOSTNAME") ?? "localhost",
+                Port = int.TryParse(Environment.GetEnvironmentVariable("RABBITMQ_PORT"), out int port) ? port : 5672,
+                UserName = Environment.GetEnvironmentVariable("RABBITMQ_USERNAME") ?? "root",
+                Password = Environment.GetEnvironmentVariable("RABBITMQ_PASSWORD") ?? "root"
             };
             _connection = factory.CreateConnection();
             _channel = _connection.CreateModel();

@@ -79,12 +79,12 @@ public class Startup
                 .AddDefaultTokenProviders();
 
         // Set up FluentEmail services
-        services
-            .AddFluentEmail("redacted@example.invalid")
-            .AddMailGunSender(
-            Configuration["Mailgun:Domain"],
-            Configuration["Mailgun:ApiKey"]
-        );
+        //services
+        //    .AddFluentEmail("redacted@example.invalid")
+        //    .AddMailGunSender(
+        //    Configuration["Mailgun:Domain"],
+        //    Configuration["Mailgun:ApiKey"]
+        //);
         services.AddScoped<IEmailService, EmailService>();
         services.AddHttpClient<ImageService>();
 
