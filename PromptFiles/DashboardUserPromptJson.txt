@@ -1,0 +1,12 @@
+﻿Based on this markdown text detailing the user's Basal Metabolic Rate (BMR), daily caloric needs, water intake, and essential micronutrients, 
+generate a JSON structure that encapsulates this data. 
+The JSON should include the BMR, total caloric need, macronutrient ratio (protein, fats, and carbohydrates) in both grams and percentages, 
+recommended water intake, and a list of essential micronutrients. 
+Use this example JSON structure as a guide, ensuring that the key values are consistent, 
+with only the actual values changing based on the user's data.
+
+The Json should follow exactly the structure of the example below, with only the actual values changing based on the user's data. The json will be deserialised into a C# object, so make sure the keys are valid C# property names.
+Please find the example json below:
+{userDashboard_JsonExample}
+
+Markdown text: {MacroTargetsResponse} + {MicroGuideResponse} + {WaterIntakeResponse}

@@ -15,10 +15,10 @@ namespace MealGeniusBackend.Services
         }
 
         // In UserService
-        public async Task<(IdentityResult Result, IdentityUser User)> CreateUserAsync(string email, string userName)
+        public async Task<(IdentityResult Result, IdentityUser User)> CreateUserAsync(string email, string userName, string password)
         {
             var user = new IdentityUser { Email = email, UserName = userName };
-            var result = await _userManager.CreateAsync(user);
+            var result = await _userManager.CreateAsync(user, password);
             return (result, user);
         }
 
@@ -39,7 +39,7 @@ namespace MealGeniusBackend.Services
 
     public interface IUserService
     {
-        Task<(IdentityResult Result, IdentityUser User)> CreateUserAsync(string email, string userName);
+        Task<(IdentityResult Result, IdentityUser User)> CreateUserAsync(string email, string userName, string password);
         Task<bool> ConfirmEmailAsync(string userId, string token);
     }
 }

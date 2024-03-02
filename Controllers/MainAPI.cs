@@ -36,10 +36,10 @@ namespace MealGeniusBackend.Controllers
 
 
         [HttpPost("RegisterUser")]
-        public async Task<IActionResult> RegisterUser([FromBody] UserInputDataModel inputData)
+        public async Task<IActionResult> RegisterUser([FromBody] UserInputsDataModel inputData)
         {
             // Attempt to create the user
-            var createResult = await _userService.CreateUserAsync(inputData.Email, inputData.UserName);
+            var createResult = await _userService.CreateUserAsync(inputData.UserDetails.Email, inputData.UserDetails.UserName, inputData.UserDetails.Password);
 
             if (!createResult.Result.Succeeded)
             {

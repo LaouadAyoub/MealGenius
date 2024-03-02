@@ -9,9 +9,10 @@ namespace MealGeniusBackend.Services
         private readonly RabbitMQService _rabbitMQService;
         private readonly ILogger<RabbitMQConsumerHostedService> _logger;
 
-        public RabbitMQConsumerHostedService(RabbitMQService rabbitMQService)
+        public RabbitMQConsumerHostedService(RabbitMQService rabbitMQService, ILogger<RabbitMQConsumerHostedService> logger)
         {
             _rabbitMQService = rabbitMQService;
+            _logger = logger;
         }
 
         public Task StartAsync(CancellationToken cancellationToken)

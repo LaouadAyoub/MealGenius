@@ -5,7 +5,6 @@ using MealGeniusBackend.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using NLog.Extensions.Logging;
 using OpenAI_API;
@@ -50,6 +49,13 @@ public class Startup
         // Set the default API authentication using the environment variable
         APIAuthentication.Default = new APIAuthentication(Environment.GetEnvironmentVariable("OPENAI_API_KEY"));
 
+        var openaiApiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
+        var connectionString = Environment.GetEnvironmentVariable("MEALGENIUS_CONNECTIONSTRING");
+        services.AddDbContext<UserDbContext>(options =>
+            options.UseNpgsql(
+                Environment.GetEnvironmentVariable("MEALGENIUS_CONNECTIONSTRING")));
+
+
         services.AddLogging(loggingBuilder =>
         {
             loggingBuilder.ClearProviders();
@@ -58,12 +64,11 @@ public class Startup
 
 
         services.AddScoped<IOpenAIService, OpenAIService>();
-        services.AddDbContext<UserDbContext>(options =>
-        options.UseNpgsql(
-            Configuration.GetConnectionString("DefaultConnection")));
 
         services.AddScoped<IMealPlanService, MealPlanService>();
         services.AddScoped<IUserDashboardService, UserDashboardService>();
+        services.AddScoped<IGroceryListService, GroceryListService>();
+        services.AddScoped<IMealsImagesService , MealsImagesService> ();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IUserService, UserService>();
         services.AddHostedService<RabbitMQConsumerHostedService>();
@@ -81,6 +86,7 @@ public class Startup
             Configuration["Mailgun:ApiKey"]
         );
         services.AddScoped<IEmailService, EmailService>();
+        services.AddHttpClient<ImageService>();
 
         services.AddSwaggerGen(c =>
         {
@@ -119,6 +125,13 @@ public class Startup
                 };
             });
         services.AddTransient<UserDbContextSeeder>();
+
+        // configure azure blob storage
+        services.AddHttpClient();
+        services.Configure<AzureStorageConfig>(Configuration.GetSection("AzureStorageConfig"));
+        services.AddSingleton<IAzureBlobService, AzureBlobService>();
+
+
     }
 
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)

@@ -5,7 +5,6 @@ using System;
 using System.Text;
 using System.Threading.Tasks;
 using MealGeniusBackend.Models;
-using static MealGeniusBackend.Controllers.MainAPIController;
 
 namespace MealGeniusBackend.Services
 {
@@ -21,7 +20,9 @@ namespace MealGeniusBackend.Services
         {
             var factory = new ConnectionFactory()
             {
-                HostName = "host.docker.internal",
+                //HostName = "host.docker.internal",
+                HostName = "localhost",
+                Port = 5672,
                 UserName = "root",
                 Password = "root"
             };
@@ -69,9 +70,16 @@ namespace MealGeniusBackend.Services
                     {
                         var mealPlanService = scope.ServiceProvider.GetRequiredService<IMealPlanService>();
                         var userDashboardService = scope.ServiceProvider.GetRequiredService<IUserDashboardService>();
-
+                        var groceryListService = scope.ServiceProvider.GetRequiredService<IGroceryListService>();
+                        var mealsImagesService = scope.ServiceProvider.GetRequiredService<IMealsImagesService>();
                         await userDashboardService.GenerateUserDashboard(userTaskDTO);
                         await mealPlanService.GenerateMealPlan(userTaskDTO);
+
+                        await Task.WhenAll(
+                            groceryListService.GenerateGroceryList(userTaskDTO),
+                            mealsImagesService.GenerateMealsImages(userTaskDTO)
+                        );
+
 
                         _logger.LogInformation($"Processed message successfully: {message}");
                     }

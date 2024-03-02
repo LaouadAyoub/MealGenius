@@ -1,12 +1,12 @@
-﻿using MealGeniusBackend.DataAcess;
+﻿using FluentEmail.Core;
+using MealGeniusBackend.DataAcess;
+using MealGeniusBackend.Models;
 using Newtonsoft.Json;
 using OpenAI_API;
-using OpenAI_API.Chat;
-using OpenAI_API.Images;
+using Stripe;
 using System.Text;
-using System.Text.RegularExpressions;
-using MealGeniusBackend.Models;
-using static MealGeniusBackend.Controllers.MainAPIController;
+// OpenAI_API.Models.Model.GPT4
+
 
 namespace MealGeniusBackend.Services
 {
@@ -20,18 +20,20 @@ namespace MealGeniusBackend.Services
     public class MealPlanService : IMealPlanService
     {
         private readonly UserDbContext _dbContext;
-        private readonly ILogger<UserDashboardService> _logger;
-        private readonly OpenAIAPI _openAiApi;
-
-
-        public MealPlanService(UserDbContext userDbContext, ILogger<UserDashboardService> logger, OpenAIAPI openAIAPI)
+        private readonly ILogger<MealPlanService> _logger;
+        private readonly IOpenAIService _openAIService;
+        private readonly IAzureBlobService _azureBlobService;
+        public MealPlanService(UserDbContext userDbContext, ILogger<MealPlanService> logger, IOpenAIService openAIService, IAzureBlobService azureBlobService)
         {
             _dbContext = userDbContext;
             _logger = logger;
-            _openAiApi = openAIAPI;
+            _openAIService = openAIService;
+            _azureBlobService = azureBlobService;
         }
         public async Task GenerateMealPlan(UserTaskDTO userTaskDTO)
         {
+            var userTask = _dbContext.Tasks.Where(u => u.Id == userTaskDTO.Id).FirstOrDefault();
+
             try
             {
                 // Logic for generating a user dashboard
@@ -44,305 +46,18 @@ namespace MealGeniusBackend.Services
                     return;
                 }
 
-                // Generate First Json that contains the meals PreData
-                string systemPromptJsonMealsGeneration = @"You are an AI assistant for MealGenius, an app designed for personalized nutrition and meal planning.
- 
-It focuses on setting nutritional goals and providing tailored meal plans based on user data. 
-The app caters to a diverse audience, including individuals with ADHD, and emphasizes informative educative content while being friendly, fun.
-User information relevant informations is provided in the following JSON format.
-{
-  ""userDetails"": {
-    ""name"": ""Ayoub"",
-    ""age"": 25,
-    ""gender"": ""Male"",
-    ""weight"": ""68 kg"",
-    ""height"": ""192 cm"",
-    ""activityLevel"": ""Regularly Active"",
-    ""foodAllergies"": [],
-    ""additionalAllergyNotes"": """",
-    ""healthConditions"": [""None""],
-    ""additionalHealthNotes"": """"
-  },
-  ""nutritionalGoals"": {
-    ""primaryGoal"": ""Weight Gain and build strong BIG muscles"",
-    ""secondaryGoals"": [""Build BIG strong muscles"",""Energy and Stamina Enhancement"", ""Digestive Health"", ""Mental Wellness and Focus""],
-    ""nutritionKnowledgeLevel"": ""Beginner"",
-    ""weightManagementSpecifics"": ""Fast Weight Gain"",
-    ""goalWeight"": ""75 kg"",
-    ""dietaryPreferences"": {
-      ""foodSource"": [""None Specified""],
-      ""macronutrientFocus"": [""Let our AI choose based on your nutritional goals (Recommended)""]
-    },
-    ""managingHealthConditions"": [""None""],
-    ""managingMentalHealthConditions"": [""None""],
-    ""additionalNutritionalInformation"": """"
-  },
-  ""mealPlanPreferences"": {
-    ""cookingSkillLevel"": ""Some Experience"",
-    ""mealSizePreference"": ""Larger Main Meals"",
-    ""favoriteCuisines"": [""Not Specified""],
-    ""favoriteDishCategories"": [""Pasta Dishes"", ""Grilled Foods"", ""Stir-Fries""],
-    ""groceryListPreferences"": {
-      ""shoppingStyle"": ""Balanced"",
-      ""stapleItems"": [""Not Specified""],
-      ""dislikedIngredients"": [],
-      ""idealCookingTime"": ""Moderately Involved"",
-      ""kitchenAppliances"": [""Stove/Oven"", ""Blender""]
-    },
-    ""snackingHabits"": ""Occasionally"",
-    ""supplementUse"": [""Protein Powders""],
-    ""budgetConstraints"": ""Moderate Budget""
-  }
-}";
-                string userPromptJsonMealsGeneration = @"Create 12 personalized meal ideas, each with a unique blend of attributes. For every meal, include:
+                var existingMealPlan = _dbContext.MealPlans.SingleOrDefault(mealPlan => mealPlan.TaskId == userTaskDTO.Id);
 
-Meal Name: Craft a creative and inviting name.
-Meal Type: Assign one or more categories (e.g., Breakfast, Lunch, Dinner, Snack, Dessert, Smoothie). A meal can belong to multiple types, like 'Breakfast' and 'Smoothie'.
-Preparation Type: Describe the preparation effort with multiple possibilities (e.g., 'Quick Fix', 'Leisurely Cooking', 'No-Cook Delight', 'Weekend Project').
-Mood Suitability: Suggest one or more imaginative mood categories (e.g., 'Adventure Seeker', 'Soul Soother', 'Memory Lane', 'Dreamy Indulgence').
-Note: Each filter category (Meal Type, Preparation Type, Mood Suitability) can have multiple options for a single meal to increase flexibility and user discoverability. For instance, a meal can be both a 'Breakfast' and a 'Smoothie', and suit moods like 'Energizing' and 'Refreshing'.
-
-Ensure that the theUserMealsRoot have common elements for users to explore related options and maintain a balance between creativity, dietary preferences, and culinary diversity.
-
-Based on the user data provided, create a JSON structure with 12 personalized theUserMealsRoot. Ensure each meal aligns with the user’s preferences, health goals, and lifestyle, reflecting the diversity and balance necessary for their diet.
-
-Plz follow the format of the JSON file provided in the following line :
-
-{
-  ""UserMeals"": [ // Array of meal objects
-    {
-      ""MealName"": ""Protein Power Pasta"", // Name of the meal
-      ""MealType"": [""Lunch"", ""Dinner""], // Categories of the meal (can be multiple)
-      ""PreparationType"": [""Quick Fix""], // Preparation effort level (can be multiple)
-      ""MoodSuitability"": [""Adventure Seeker"", ""Muscle Builder""] // Moods suitable for the meal (can be multiple)
-    },
-    // ... other meal objects
-    {
-      ""MealName"": ""Energizing Egg Stir-fry"", // Another meal example
-      ""MealType"": [""Breakfast"", ""Dinner""], // This meal fits both breakfast and dinner categories
-      ""PreparationType"": [""Quick Fix""], // Indicates a quick preparation time
-      ""MoodSuitability"": [""Morning Boost"", ""Muscle Builder""] // Suitable for a morning energy boost and muscle building
-    },
-    // ... continue with other theUserMealsRoot
-    {
-      ""MealName"": ""Tummy-Friendly Tuna Toasts"", // Last meal example
-      ""MealType"": [""Breakfast"", ""Lunch""], // Suitable for breakfast and lunch
-      ""PreparationType"": [""No-Cook Delight""], // No cooking required, easy to prepare
-      ""MoodSuitability"": [""Soul Soother"", ""Energizing""] // Soothing yet energizing meal
-    }
-  ]
-}
-
-";
-                var userMealsJson = GenerateJsonBasedOnPromptResponse(_openAiApi, systemPromptJsonMealsGeneration, userPromptJsonMealsGeneration);
-
-                UserMealsRoot theUserMealsRoot = JsonConvert.DeserializeObject<UserMealsRoot>(userMealsJson);
-
-
-
-                //Meal Recipe and PostData Generation
-                var tasks = new List<Task>();
-                foreach (var meal in theUserMealsRoot.UserMeals)
+                if (existingMealPlan is not null)
                 {
-                    tasks.Add(FillUserMealsData(meal));
-
+                    return;
                 }
-                await Task.WhenAll(tasks);
 
+                // Generate First Json that contains the meals PreData
+                string MealRecipeBreakdow_JsonExample = System.IO.File.ReadAllText("JsonFiles\\Meal_PreData_Generation.json");
 
-
-                //GroceryList Generation
-                var chatGroceryListPromptGeneration = CreateConversationGPT4_6000token(_openAiApi);
-                var systemPromptGroceryListGeneration = @"
-You are an AI assistant for MealGenius, an app designed for personalized nutrition and meal planning.
- 
-It focuses on setting nutritional goals and providing tailored meal plans based on user data. 
-The app caters to a diverse audience, including individuals with ADHD, and emphasizes informative educative content while being friendly, fun.
-
-MealGenius is used globally, so please use simple, clear English, avoiding slang or region-specific terms.
-You can use emojis to add engagement and fun, but only where appropriate – do not overuse them.
-
-User information relevant informations is provided in the following JSON format.
-{
-  ""userDetails"": {
-    ""name"": ""Ayoub"",
-    ""age"": 25,
-    ""gender"": ""Male"",
-    ""weight"": ""68 kg"",
-    ""height"": ""192 cm"",
-    ""activityLevel"": ""Regularly Active"",
-    ""foodAllergies"": [],
-    ""additionalAllergyNotes"": """",
-    ""healthConditions"": [""None""],
-    ""additionalHealthNotes"": """"
-  },
-  ""nutritionalGoals"": {
-    ""primaryGoal"": ""Weight Gain and build strong BIG muscles"",
-    ""secondaryGoals"": [""Build BIG strong muscles"",""Energy and Stamina Enhancement"", ""Digestive Health"", ""Mental Wellness and Focus""],
-    ""nutritionKnowledgeLevel"": ""Beginner"",
-    ""weightManagementSpecifics"": ""Fast Weight Gain"",
-    ""goalWeight"": ""75 kg"",
-    ""dietaryPreferences"": {
-      ""foodSource"": [""None Specified""],
-      ""macronutrientFocus"": [""Let our AI choose based on your nutritional goals (Recommended)""]
-    },
-    ""managingHealthConditions"": [""None""],
-    ""managingMentalHealthConditions"": [""None""],
-    ""additionalNutritionalInformation"": """"
-  },
-  ""mealPlanPreferences"": {
-    ""cookingSkillLevel"": ""Some Experience"",
-    ""mealSizePreference"": ""Larger Main Meals"",
-    ""favoriteCuisines"": [""Not Specified""],
-    ""favoriteDishCategories"": [""Pasta Dishes"", ""Grilled Foods"", ""Stir-Fries""],
-    ""groceryListPreferences"": {
-      ""shoppingStyle"": ""Balanced"",
-      ""stapleItems"": [""Not Specified""],
-      ""dislikedIngredients"": [],
-      ""idealCookingTime"": ""Moderately Involved"",
-      ""kitchenAppliances"": [""Stove/Oven"", ""Blender""]
-    },
-    ""snackingHabits"": ""Occasionally"",
-    ""supplementUse"": [""Protein Powders""],
-    ""budgetConstraints"": ""Moderate Budget""
-  }
-}
-";
-                string userPromptGroceryListGeneration = $@"
-Generate a markdown text that provides a comprehensive guide on their grocery list, tailored to their personal data and health goals. 
-
-
-Create a grocery list for the user based on a provided [list of ingredients] The list should be organized by categories and follow the artistic direction of MealGenius, making it educational and enjoyable. 
-
-Grocery List Introduction:
-   Markdown Header level 1: # Your Personalized Grocery Adventure
-   Content: Begin with a fun and welcoming introduction to the grocery list, setting the tone for a nutritional journey.
-   Organize Ingredients by Category:
-
-Organize Ingredients by Category:
-   Markdown Header level 1: # Navigating Your Grocery Categories
-   Content: 
-      List the ingredients, organizing them into categories such as 'Fruits & Vegetables', 'Proteins', 'Dairy', 'Grains', etc. You should be creative with category names based on the user's data. 
-      Each category will be in a Markdown Header level 2.
-      Each category will have a list of ingredients, each ingredient will be in a Markdown Header level 3.
-      Each Ingredient will have 2 bullet points linked to it :
-         - Benefits : Explain how this ingredient contributes to health and well-being and specilly to the user's goal.
-         - Nutrients : Highlight the key nutrients found in the ingredient.
-
-Make each description both informative and entertaining, aligning with the MealGenius theme of making nutrition education enjoyable.
-
-- User Data is provided in the system prompt
-  [list of ingredients : this list contains the list of ingredients that the user needs to prepare all their meals :
-{theUserMealsRoot.DisplayAllIngredients()}
-
-
-                ]
-
-Sum up all these ingredients to generate a detailed grocery list that follows the provided format
-  ]
-You can use emojis to add engagement and fun, but only where appropriate – do not overuse them.
-Use a conversational tone, as science popularizer is speaking directly to them, starting by greeting the user by their name.
-!! DIRECTLY START BY GENERATING THE MARKDOWN don't write text before like ""---""
-Note for GPT : Of course, if there is an ingredient that is specified twice, you don't need to write it twice, just write it once please.
-Note for GPT :  Generate the entire Grocery list, don't put comments like … (continuation), where you let the user continue from his head, just write the entire complete grocery list please, Mention ALL the ingredients that i provided to you please !!!!
-";
-                chatGroceryListPromptGeneration.AppendSystemMessage(systemPromptGroceryListGeneration);
-                chatGroceryListPromptGeneration.AppendUserInput(userPromptGroceryListGeneration);
-                var chatGroceryListGenerationResponse = await chatGroceryListPromptGeneration.GetResponseFromChatbotAsync();
-
-
-                //Image Narrative Generation
-                var chatImageNarrativeGeneration = CreateConversationGPT4(_openAiApi);
-                string systemPromptImageGeneration = @"
-You are an AI assistant for MealGenius, an app designed for personalized nutrition and meal planning.
- 
-It focuses on setting nutritional goals and providing tailored meal plans based on user data. 
-The app caters to a diverse audience, including individuals with ADHD, and emphasizes informative educative content while being friendly, fun.
-
-MealGenius is used globally, so please use simple, clear English, avoiding slang or region-specific terms.
-You can use emojis to add engagement and fun, but only where appropriate – do not overuse them.
-
-User information relevant informations is provided in the following JSON format.
-{
-  ""userDetails"": {
-    ""name"": ""Ayoub"",
-    ""age"": 25,
-    ""gender"": ""Male"",
-    ""weight"": ""68 kg"",
-    ""height"": ""192 cm"",
-    ""activityLevel"": ""Regularly Active"",
-    ""foodAllergies"": [],
-    ""additionalAllergyNotes"": """",
-    ""healthConditions"": [""None""],
-    ""additionalHealthNotes"": """"
-  },
-  ""nutritionalGoals"": {
-    ""primaryGoal"": ""Weight Gain and build strong BIG muscles"",
-    ""secondaryGoals"": [""Build BIG strong muscles"",""Energy and Stamina Enhancement"", ""Digestive Health"", ""Mental Wellness and Focus""],
-    ""nutritionKnowledgeLevel"": ""Beginner"",
-    ""weightManagementSpecifics"": ""Fast Weight Gain"",
-    ""goalWeight"": ""75 kg"",
-    ""dietaryPreferences"": {
-      ""foodSource"": [""None Specified""],
-      ""macronutrientFocus"": [""Let our AI choose based on your nutritional goals (Recommended)""]
-    },
-    ""managingHealthConditions"": [""None""],
-    ""managingMentalHealthConditions"": [""None""],
-    ""additionalNutritionalInformation"": """"
-  },
-  ""mealPlanPreferences"": {
-    ""cookingSkillLevel"": ""Some Experience"",
-    ""mealSizePreference"": ""Larger Main Meals"",
-    ""favoriteCuisines"": [""Not Specified""],
-    ""favoriteDishCategories"": [""Pasta Dishes"", ""Grilled Foods"", ""Stir-Fries""],
-    ""groceryListPreferences"": {
-      ""shoppingStyle"": ""Balanced"",
-      ""stapleItems"": [""Not Specified""],
-      ""dislikedIngredients"": [],
-      ""idealCookingTime"": ""Moderately Involved"",
-      ""kitchenAppliances"": [""Stove/Oven"", ""Blender""]
-    },
-    ""snackingHabits"": ""Occasionally"",
-    ""supplementUse"": [""Protein Powders""],
-    ""budgetConstraints"": ""Moderate Budget""
-  }
-}
-
-";
-                string userImageNarrativeGeneration = $@"
-Based on the user infos and mood and from you creativity, Create a descriptive narrative for a set of meal images, defining a cohesive mood, style, and environment.
-This narrative will be used as the basis for generating images with DALL·E 3 . The images should visually represent a variety of theUserMealsRoot in a consistent and appealing manner. Consider these aspects in your description:
-
-Mood and Style: Describe the overall mood and artistic style of the images. Ensure that it's all about SIMPLICITY, and minimalistc style.
-
-Environment Setting: Define the setting or backdrop for the theUserMealsRoot. Is it an outdoor picnic, a cozy home kitchen, an upscale restaurant, or a casual café?
-
-Plate Presentation: Detail how the theUserMealsRoot should be presented on the plate. Should they be meticulously arranged, casually plated, or artistically styled?
-
-Color Palette: Suggest a color palette that should be consistent across all images. Consider colors that evoke the mood and complement the food.
-
-Additional Elements: Decide if there are any additional elements that should be included in every image, such as specific tableware, a particular type of garnish, or consistent lighting.
-
-This narrative will guide the creation of a series of meal images that are visually harmonious and aligned with the defined mood and setting. The goal is to ensure that each image, while unique in its meal presentation, shares a common aesthetic thread with the others.
-
-And remember : Food is not just to nourish the body
-
-Food nourishes the soul 
-
-You have to romance people
-
-It has to be something that makes people go, omg, I can't wait to get a fork and dig into that
-";
-                chatImageNarrativeGeneration.AppendSystemMessage(systemPromptImageGeneration);
-                chatImageNarrativeGeneration.AppendUserInput(userImageNarrativeGeneration);
-                var chatImageNarrativeGenerationResponse = await chatImageNarrativeGeneration.GetResponseFromChatbotAsync();
-
-                // Image Generation
-                foreach (var meal in theUserMealsRoot.UserMeals)
-                {
-                    var chatImagePromptGeneration = CreateConversationGPT4(_openAiApi);
-
-                    string systemPrompt = @"You are an AI assistant for MealGenius, an app designed for personalized nutrition and meal planning.
+                var UserInputsJson = userInput.UserData;
+                string systemPromptJsonMealsGeneration = $@"You are an AI assistant for MealGenius, an app designed for personalized nutrition and meal planning.
  
                                 It focuses on setting nutritional goals and providing tailored meal plans based on user data. 
                                 The app caters to a diverse audience, including individuals with ADHD, and emphasizes informative educative content while being friendly, fun.
@@ -351,220 +66,301 @@ It has to be something that makes people go, omg, I can't wait to get a fork and
                                 You can use emojis to add engagement and fun, but only where appropriate – do not overuse them.
 
                                 User information relevant informations is provided in the following JSON format.
-                                {
-                                    ""userDetails"": {
-                                    ""name"": ""Ayoub"",
-                                    ""age"": 25,
-                                    ""gender"": ""Male"",
-                                    ""weight"": ""68 kg"",
-                                    ""height"": ""192 cm"",
-                                    ""activityLevel"": ""Regularly Active"",
-                                    ""foodAllergies"": [],
-                                    ""additionalAllergyNotes"": """",
-                                    ""healthConditions"": [""None""],
-                                    ""additionalHealthNotes"": """"
-                                    },
-                                    ""nutritionalGoals"": {
-                                    ""primaryGoal"": ""Weight Gain and build strong BIG muscles"",
-                                    ""secondaryGoals"": [""Build BIG strong muscles"",""Energy and Stamina Enhancement"", ""Digestive Health"", ""Mental Wellness and Focus""],
-                                    ""nutritionKnowledgeLevel"": ""Beginner"",
-                                    ""weightManagementSpecifics"": ""Fast Weight Gain"",
-                                    ""goalWeight"": ""75 kg"",
-                                    ""dietaryPreferences"": {
-                                        ""foodSource"": [""None Specified""],
-                                        ""macronutrientFocus"": [""Let our AI choose based on your nutritional goals (Recommended)""]
-                                    },
-                                    ""managingHealthConditions"": [""None""],
-                                    ""managingMentalHealthConditions"": [""None""],
-                                    ""additionalNutritionalInformation"": """"
-                                    },
-                                    ""mealPlanPreferences"": {
-                                    ""cookingSkillLevel"": ""Some Experience"",
-                                    ""mealSizePreference"": ""Larger Main Meals"",
-                                    ""favoriteCuisines"": [""Not Specified""],
-                                    ""favoriteDishCategories"": [""Pasta Dishes"", ""Grilled Foods"", ""Stir-Fries""],
-                                    ""groceryListPreferences"": {
-                                        ""shoppingStyle"": ""Balanced"",
-                                        ""stapleItems"": [""Not Specified""],
-                                        ""dislikedIngredients"": [],
-                                        ""idealCookingTime"": ""Moderately Involved"",
-                                        ""kitchenAppliances"": [""Stove/Oven"", ""Blender""]
-                                    },
-                                    ""snackingHabits"": ""Occasionally"",
-                                    ""supplementUse"": [""Protein Powders""],
-                                    ""budgetConstraints"": ""Moderate Budget""
-                                    }
-                                }";
+                                {UserInputsJson}";
 
-                    string userPromptImageGeneration = $@"
-Generate a detailed prompt for DALL·E 3 to create an image of a meal. This image should be based on the provided descriptive narrative, ensuring consistency in mood, style, and environment. 
-Additionally, incorporate specific details from the given recipe. 
-The prompt should blend these elements to guide the creation of an image that represents the meal accurately while adhering to the overall aesthetic theme.
+                string userPromptJsonMealsGeneration = $@"Create 12 personalized meal ideas, each with a unique blend of attributes. For every meal, include:
 
-Please find the narrative below:
-{chatImageNarrativeGenerationResponse}
+Meal Name: Craft a creative and inviting name.
+Meal Type: Assign one or more categories (e.g., Breakfast, Lunch, Dinner, Snack, Dessert, Smoothie). A meal can belong to multiple types, like 'Breakfast' and 'Smoothie'.
+Preparation Skill: Indicate the level of effort and skill required for the recipe, categorized into 'Easy', 'Intermediate', 'Advanced', and 'Expert'. 
+- 'Easy' implies recipes that are quick and straightforward, requiring basic cooking skills and minimal ingredients. Ideal for beginners or those seeking a quick meal.
+- 'Intermediate' involves recipes that require some cooking experience, introducing more complex techniques and a greater variety of ingredients, but still accessible to a motivated home cook.
+- 'Advanced' denotes recipes that demand a good understanding of cooking techniques, involving multiple components, specialized ingredients, or equipment, suitable for those with significant cooking experience.
+- 'Expert' represents the highest complexity level, requiring extensive culinary knowledge, precision, and patience, often including professional techniques and intricate presentations. 
+Mood Suitability: Suggest one or more mood categories that will serve as tags for each meal. It's important to ensure that meals share common mood suitability tags to facilitate user exploration of related options. These tags should be imaginative and cater to various user preferences and emotional states (e.g., 'Adventure Seeker', 'Soul Soother', 'Memory Lane', 'Dreamy Indulgence'). By maintaining common mood tags across different meals, 
+users can easily find meals that match their current mood or desired emotional state, enhancing personalization and user experience. Aim for a mix of moods that cater to a broad range of dietary preferences and emotional needs, ensuring a balanced and diverse meal selection, but ensure that meals share mood suitablity between each other
 
-Please find the recipe below:
-{meal.Recipe}
+Note: Each filter category (Meal Type, Preparation Type, Mood Suitability) can have multiple options for a single meal to increase flexibility and user discoverability. For instance, a meal can be both a 'Breakfast' and a 'Smoothie', and suit moods like 'Energizing' and 'Refreshing'.
+Ensure that the meals have common elements for users to explore related options and maintain a balance between creativity, dietary preferences, and culinary diversity.
 
-Ensure the prompt doesnt exceed 3500 caracters.
+Based on the user data provided, create a JSON structure with 12 personalized meals. Ensure each meal aligns with the user’s preferences, health goals, and lifestyle, reflecting the diversity and balance necessary for their diet.
 
-And remember : Food is not just to nourish the body
+Plz follow the format of the JSON file provided in the following line :
 
-Food nourishes the soul 
-
-You have to romance people
-
-It has to be something that makes people go, omg, I can't wait to get a fork and dig into that,
-
-Ensure that the image should be simple and clear, with a focus on the meal itself, so that it can be easily understood by users. and not be distracting or confusing.
-";
-
-                    chatImagePromptGeneration.AppendSystemMessage(systemPrompt);
-                    chatImagePromptGeneration.AppendUserInput(userPromptImageGeneration);
-
-                    var chatImagePromptResponse = await chatImagePromptGeneration.GetResponseFromChatbotAsync();
-
-                    bool isImageCreated = false;
-                    int retryCount = 0;
-                    const int maxRetries = 10;
-
-                    while (!isImageCreated && retryCount < maxRetries)
-                    {
-                        try
-                        {
-                            _logger.LogInformation($"Attempt {retryCount + 1} to generate image for meal '{meal.MealName}'.");
+{MealRecipeBreakdow_JsonExample}";
+                var userMealsJson = await _openAIService.GenerateJsonBasedOnPromptResponseAsync(systemPromptJsonMealsGeneration, userPromptJsonMealsGeneration, 1000, model: "gpt-4-1106-preview", temperature: 0.8);
 
 
-                            var result = await _openAiApi.ImageGenerations.CreateImageAsync(
-                            new ImageGenerationRequest(chatImagePromptResponse, OpenAI_API.Models.Model.DALLE3, ImageSize._1024, "hd"));
+                UserMealsRoot theUserMealsRoot = JsonConvert.DeserializeObject<UserMealsRoot>(userMealsJson);
 
-                            var imageUrl = result.Data[0].Url;
-                            if (!string.IsNullOrEmpty(imageUrl))
-                            {
-                                string localImagePath = await DownloadAndSaveImage(imageUrl, meal.MealName);
-                                meal.MealImage = localImagePath;
-                                isImageCreated = true;
-                                _logger.LogInformation($"Image successfully generated and saved for meal '{meal.MealName}'.");
-
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogInformation($"Error during image generation for meal '{meal.MealName}': {ex.Message}");
-
-                            retryCount++;
-                            if (retryCount >= maxRetries)
-                            {
-                                _logger.LogInformation($"Max retry attempts reached for meal '{meal.MealName}'.");
-                                throw; // Rethrow the exception if the max retries have been reached
-                            }
-                        }
-                    }
+                //Meal Recipe and PostData Generation
+                var tasks = new List<Task>();
+                foreach (var meal in theUserMealsRoot.UserMeals)
+                {
+                    tasks.Add(FillUserMealsData(meal, UserInputsJson));
                 }
+                await Task.WhenAll(tasks);
+
 
                 string mealPlanJson = Newtonsoft.Json.JsonConvert.SerializeObject(theUserMealsRoot);
 
 
 
-
-                var existingMealPlan = _dbContext.MealPlans.FirstOrDefault(mp => mp.TaskId == userTaskDTO.Id);
-                if (existingMealPlan != null)
+                // If no record exists, create a new one
+                MealPlan newMealPlan = new MealPlan
                 {
-                    // If a record exists, update it
-                    existingMealPlan.MealPlanJson = mealPlanJson; // Assuming 'mealPlan' holds the updated meal plan
-                    //existingMealPlan.GroceryListJson = groceryList; // Assuming 'groceryList' holds the updated grocery list
-                    existingMealPlan.Title = "Updated Meal Plan Title"; // Update other fields as necessary
-                    existingMealPlan.CreatedAt = DateTime.UtcNow;
-                    existingMealPlan.GroceryListJson = chatGroceryListGenerationResponse; // Contains the grocery list of the week
-                }
-                else
-                {
-                    // If no record exists, create a new one
-                    MealPlan newMealPlan = new MealPlan
-                    {
-                        Id = Guid.NewGuid(),
-                        UserId = userTaskDTO.UserId,
-                        TaskId = userTaskDTO.Id,
-                        Title = "Sample Meal Plan",
-                        MealPlanJson = mealPlanJson,
-                        GroceryListJson = chatGroceryListGenerationResponse, // Contains the grocery list of the week
-                        CreatedAt = DateTime.UtcNow
+                    Id = Guid.NewGuid(),
+                    UserId = userTaskDTO.UserId,
+                    TaskId = userTaskDTO.Id,
+                    Title = "Sample Meal Plan",
+                    MealPlanJson = mealPlanJson,
+                    GroceryListJson = "",
+                    CreatedAt = DateTime.UtcNow
                 };
 
-                    // Add the new record to the database
-                    _dbContext.MealPlans.Add(newMealPlan);
-                }
+                // Add the new record to the database
+                _dbContext.MealPlans.Add(newMealPlan);
+                userTask.UserOutputStatus = UserOutputStatus.MealPlanCompleted;
                 _dbContext.SaveChanges();
+                _logger.LogInformation($"MealPlan generated for UserId: {userTaskDTO.UserId}");
 
-                _logger.LogInformation($"MealPlan and grocerylist generated for UserId: {userTaskDTO.UserId}");
+                //Image Narrative Generation
+                #region ImageGeneration
+                //                string systemPromptImageGeneration = $@"You are an AI assistant for MealGenius, an app designed for personalized nutrition and meal planning.
+
+                //                                It focuses on setting nutritional goals and providing tailored meal plans based on user data. 
+                //                                The app caters to a diverse audience, including individuals with ADHD, and emphasizes informative educative content while being friendly, fun.
+
+                //                                MealGenius is used globally, so please use simple, clear English, avoiding slang or region-specific terms.
+                //                                You can use emojis to add engagement and fun, but only where appropriate – do not overuse them.
+
+                //                                User information relevant informations is provided in the following JSON format.
+                //                                {UserInputsJson}"; 
+
+                //                string userImageNarrativeGeneration = $@"
+                //Based on the user infos and mood and from you creativity, Create a descriptive narrative for a set of meal images, defining a cohesive mood, style, and environment.
+                //This narrative will be used as the basis for generating images with DALL·E 3 . The images should visually represent a variety of theUserMealsRoot in a consistent and appealing manner. Consider these aspects in your description:
+
+                //Mood and Style: Describe the overall mood and artistic style of the images. Ensure that it's all about SIMPLICITY, and minimalistc style.
+
+                //Environment Setting: Define the setting or backdrop for the theUserMealsRoot. Is it an outdoor picnic, a cozy home kitchen, an upscale restaurant, or a casual café?
+
+                //Plate Presentation: Detail how the theUserMealsRoot should be presented on the plate. Should they be meticulously arranged, casually plated, or artistically styled?
+
+                //Color Palette: Suggest a color palette that should be consistent across all images. Consider colors that evoke the mood and complement the food.
+
+                //Additional Elements: Decide if there are any additional elements that should be included in every image, such as specific tableware, a particular type of garnish, or consistent lighting.
+
+                //This narrative will guide the creation of a series of meal images that are visually harmonious and aligned with the defined mood and setting. The goal is to ensure that each image, while unique in its meal presentation, shares a common aesthetic thread with the others.
+
+                //And remember : Food is not just to nourish the body
+
+                //Food nourishes the soul 
+
+                //You have to romance people
+
+                //It has to be something that makes people go, omg, I can't wait to get a fork and dig into that
+                //";
+
+                //                var chatImageNarrativeGenerationResponse = await _openAIService.GetResponseAsync(systemPromptImageGeneration, userImageNarrativeGeneration, OpenAI_API.Models.Model.GPT4, 5000);
+
+                //                // Image Generation
+                //                foreach (var meal in theUserMealsRoot.UserMeals)
+                //                {
+                //                    string systemPrompt = $@"You are an AI assistant for MealGenius, an app designed for personalized nutrition and meal planning.
+
+                //                                It focuses on setting nutritional goals and providing tailored meal plans based on user data. 
+                //                                The app caters to a diverse audience, including individuals with ADHD, and emphasizes informative educative content while being friendly, fun.
+
+                //                                MealGenius is used globally, so please use simple, clear English, avoiding slang or region-specific terms.
+                //                                You can use emojis to add engagement and fun, but only where appropriate – do not overuse them.
+
+                //                                User information relevant informations is provided in the following JSON format.
+                //                                {UserInputsJson}";
+
+                //                    string userPromptImageGeneration = $@"
+                //Generate a detailed prompt for DALL·E 3 to create an image of a meal. This image should be based on the provided descriptive narrative, ensuring consistency in mood, style, and environment. 
+                //Additionally, incorporate specific details from the given recipe. 
+                //The prompt should blend these elements to guide the creation of an image that represents the meal accurately while adhering to the overall aesthetic theme.
+
+                //Please find the narrative below:
+                //{chatImageNarrativeGenerationResponse}
+
+                //Please find the recipe below:
+                //{meal.Recipe}
+
+                //Ensure the prompt doesnt exceed 3500 caracters.
+
+                //And remember : Food is not just to nourish the body
+
+                //Food nourishes the soul 
+
+                //You have to romance people
+
+                //It has to be something that makes people go, omg, I can't wait to get a fork and dig into that,
+
+                //Ensure that the image should be simple and clear, with a focus on the meal itself, so that it can be easily understood by users. and not be distracting or confusing.
+                //";
+
+                //                    var chatImagePromptResponse = await _openAIService.GetResponseAsync(systemPrompt, userPromptImageGeneration, OpenAI_API.Models.Model.GPT4, 5000);
+
+
+                //                    var imageUrl = await _openAIService.GenerateImageForMealAsync(chatImagePromptResponse);
+
+                //                    if (!string.IsNullOrEmpty(imageUrl))
+                //                    {
+                //                        //updload the image on azure blob storage
+                //                        var imageBlobUrl = await _azureBlobService.UploadImageAsync(imageUrl);
+                //                        meal.MealImage = imageBlobUrl;
+                //                    }                  
+                //                    //if (!string.IsNullOrEmpty(imageUrl))
+                //                    //{
+                //                    //    string localImagePath = await DownloadAndSaveImage(imageUrl, meal.MealName);
+                //                    //    meal.MealImage = localImagePath;
+                //                    //}
+                //                }
+                //                string mealPlanJson_images = Newtonsoft.Json.JsonConvert.SerializeObject(theUserMealsRoot);
+
+                //                if (existingMealPlan != null)
+                //                {
+                //                    existingMealPlan.MealPlanJson = mealPlanJson_images;
+                //                    _dbContext.SaveChanges();
+                //                    _logger.LogInformation("MealPlan updated with images successfully");
+                //                }
+                //                else
+                //                {
+                //                    var recentlySavedMealPlan = _dbContext.MealPlans.SingleOrDefault(mealPlan => mealPlan.TaskId == userTaskDTO.Id);
+                //                    recentlySavedMealPlan.MealPlanJson = mealPlanJson_images;
+                //                    _dbContext.SaveChanges();
+                //                    _logger.LogInformation("MealPlan updated with images successfully");
+                //                }
+                //           
+                #endregion
             }
+
             catch (Exception ex)
             {
+                userTask.Status = UserTaskStatus.Failed;
+                await _dbContext.SaveChangesAsync();
                 _logger.LogError(ex, "Error while generating MealPlan");
             }
         }
-        async Task FillUserMealsData(aMeal meal)
+        async Task FillUserMealsData(aMeal meal, string UserInputsJson)
         {
-            meal.Recipe = await GetMealRecipe(meal);
+            meal.Tags = new List<string>();
+
+            meal.Tags.AddRange(meal.MealType);
+            meal.Tags.AddRange(meal.MoodSuitability);
+            meal.Tags.Add(meal.PreparationSkill);
+
+            meal.Recipe = await GetMealRecipe(meal, UserInputsJson);
+
 
             string systemPromptJsonMealDataGeneration = @"You are an AI assistant for MealGenius, an app designed for personalized nutrition and meal planning.
  
 It focuses on setting nutritional goals and providing tailored meal plans based on user data. 
 The app caters to a diverse audience, including individuals with ADHD, and emphasizes informative educative content while being friendly, fun.";
 
-            string userPromptJsonMealDataGeneration = $@"
-Create a concise JSON summary for this recipe:
+            var mealTotalBreakDown_JsonExamplePath = "JsonFiles/MealTotalBreakDown_JsonExample.json";
+            string mealTotalBreakDown_JsonExample = System.IO.File.ReadAllText(mealTotalBreakDown_JsonExamplePath);
+            string userPromptJsonMealBreakdown = $@"
+The following is the recipe of the user
+[Recipe : {meal.Recipe}]
 
-{meal.Recipe}
+to make this recipe easy to parse by our C# backend and React app int the front we want to serialize it to a json, can you create this json with the following format :
 
+[JsonFormat : {mealTotalBreakDown_JsonExample} ]
 
-This summary will provide a quick visual representation of key information as tags and assist in generating grocery lists. Include the following elements:
-
+In this json The MealDetails object will provide a quick visual representation of key information as tags and assist in generating grocery lists. 
 Meal Name: Specify the name of the dish.
 
-Macronutrient Tags: List each macronutrient (proteins, carbohydrates, fats, and calories) with their respective quantities in grams (g) or calories (kcal).
+Macronutrient: List each macronutrient (proteins, carbohydrates, fats, and calories) with their respective quantities in grams (g) or calories (kcal), please provide one average value for calories if there is a range.
+    In this section it's very important and crucial that you provide the exact value of each macronutrient in the meal and follow this exact format, which will help up to parse the data and display it in the front end app.
+    So Please follow this format :
+    ""Macronutrients"": {{
+      ""Proteins"": ""40g"" , //here it's important that that format will be 40g ,a number then g
+      ""Carbohydrates"": ""75g"", //here it's important that that format will be 75g, a number then g
+      ""Fats"": ""35g"", //here it's important that that format will be 35g, a number then g
+      ""Calories"": ""800kcal""// here it's important that that format will be 800kcal, a number then kcal, if there is a range like 250-450kcal provide the average value that would be 350kcal
+    }},
 
-Micronutrient Tags: Provide a simple list of key micronutrients present in the meal, formatted as tags. Include only the names of these nutrients.
 
-Serving Size Tag: Add a tag for the serving size, indicating the quantity in grams of the final prepared dish.
+Micronutrient: Provide a simple list of key micronutrients present in the meal, formatted as tags. Include only the names of these nutrients.
+
+Serving Size: Add a tag for the serving size, indicating the quantity in grams of the final prepared dish.
 
 Ingredient List for Groceries: List all the ingredients used in the recipe, without specifying quantities. This list will be used for generating grocery lists. add items even if they are optional.
 
+and to make easier to parse and style meal recipes in the react app MealInformation object should contain the exact recipe of 
+the meal but decomposed into elements.
+	
 
-This structure of the json should be used consistently for different theUserMealsRoot, with only the data values changing:
-
-{{
-  ""MealName"": ""Classic Spaghetti Carbonara"",
-  ""Macronutrients"": {{
-    ""Proteins"": ""40g"",
-    ""Carbohydrates"": ""75g"",
-    ""Fats"": ""35g"",
-    ""Calories"": ""800 kcal""
-  }},
-  ""Micronutrients"": [""Calcium"", ""Vitamin B12"", ""Zinc""],
-  ""ServingSize"": ""500g"",
-  ""Ingredients"": [""Spaghetti"", ""Egg"", ""Pancetta"", ""Pecorino Cheese"", ""Parmesan Cheese"", ""Black Pepper"", ""Salt"", ""Garlic Powder""]
-}}
-
+This json representation will help us to divide the markdown recipe into its components while keeping exactly the same content in markdown format, 
+write the content of each section without rewriting the title of the section plz
 ";
 
-            var userMealDataJson = GenerateJsonBasedOnPromptResponse(_openAiApi, systemPromptJsonMealDataGeneration, userPromptJsonMealDataGeneration);
+            var userMealDataBreakdownJson = await _openAIService.GenerateJsonBasedOnPromptResponseAsync(systemPromptJsonMealDataGeneration, userPromptJsonMealBreakdown, 4096);
+            var MealDataBreakdownJson = JsonConvert.DeserializeObject<MealTotalBreakdown>(userMealDataBreakdownJson);
 
-            var MealData = JsonConvert.DeserializeObject<MealData>(userMealDataJson);
 
-            meal.Macronutrients = MealData.Macronutrients;
-            meal.Micronutrients = MealData.Micronutrients;
-            meal.ServingSize = MealData.ServingSize;
-            meal.Ingredients = MealData.Ingredients;
+            meal.mealRecipeBreakdown = MealDataBreakdownJson!.MealInformation;
+            meal.Macronutrients = MealDataBreakdownJson.MealDetails.Macronutrients;
+            meal.Micronutrients = MealDataBreakdownJson.MealDetails.Micronutrients;
+            meal.ServingSize = MealDataBreakdownJson.MealDetails.ServingSize;
+            meal.Ingredients = MealDataBreakdownJson.MealDetails.Ingredients;
+
+            var macroPourcentage = CalculateMacronutrientPercentagesFromString(meal.Macronutrients.Calories, meal.Macronutrients.Carbohydrates, meal.Macronutrients.Proteins, meal.Macronutrients.Fats);
+
+            meal.Macronutrients_Pourcentage = new Macronutrients_Pourcentage
+            {
+                CarbsPercentage = macroPourcentage.CarbsPercentage,
+                ProteinPercentage = macroPourcentage.ProteinPercentage,
+                FatsPercentage = macroPourcentage.FatsPercentage
+            };
         }
 
+        public (string CarbsPercentage, string ProteinPercentage, string FatsPercentage) CalculateMacronutrientPercentagesFromString(
+            string totalCaloriesStr, string carbsStr, string proteinStr, string fatsStr)
+        {
+            try
+            {
+                // Convert string values to double, extracting the numeric part
+                double totalCalories = double.Parse(totalCaloriesStr.TrimEnd('k', 'c', 'a', 'l').Trim());
+                double carbsGrams = double.Parse(carbsStr.TrimEnd('g').Trim());
+                double proteinGrams = double.Parse(proteinStr.TrimEnd('g').Trim());
+                double fatsGrams = double.Parse(fatsStr.TrimEnd('g').Trim());
 
-        private async Task<string> GetMealRecipe(aMeal meal)
+                // Calories per gram for each macronutrient
+                const double caloriesPerGramCarbs = 4.0;
+                const double caloriesPerGramProtein = 4.0;
+                const double caloriesPerGramFats = 9.0;
+
+                // Calculate total calories from each macronutrient
+                double caloriesFromCarbs = carbsGrams * caloriesPerGramCarbs;
+                double caloriesFromProtein = proteinGrams * caloriesPerGramProtein;
+                double caloriesFromFats = fatsGrams * caloriesPerGramFats;
+
+                // Calculate the percentage of total calories for each macronutrient
+                double carbsPercentage = (caloriesFromCarbs / totalCalories) * 100;
+                double proteinPercentage = (caloriesFromProtein / totalCalories) * 100;
+                double fatsPercentage = (caloriesFromFats / totalCalories) * 100;
+
+                // Format and return the percentages as strings with two decimal places
+                return ($"{carbsPercentage:F2}", $"{proteinPercentage:F2}", $"{fatsPercentage:F2}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error calculating macronutrient percentages: {ex.Message}");
+                // make a quick prompt to fix it
+                //throw new Exception("Error calculating macronutrient percentages");
+                return ("Error", "Error", "Error");
+            }
+        }
+
+        private async Task<string> GetMealRecipe(aMeal meal, string UserInputsJson)
         {
 
-            var chatRecipeGeneration = CreateConversationGPT4(_openAiApi);
-            string systemPrompt = @"You are an AI assistant for MealGenius, an app designed for personalized nutrition and meal planning.
+            string systemPrompt = $@"You are an AI assistant for MealGenius, an app designed for personalized nutrition and meal planning.
  
                                 It focuses on setting nutritional goals and providing tailored meal plans based on user data. 
                                 The app caters to a diverse audience, including individuals with ADHD, and emphasizes informative educative content while being friendly, fun.
@@ -573,206 +369,75 @@ This structure of the json should be used consistently for different theUserMeal
                                 You can use emojis to add engagement and fun, but only where appropriate – do not overuse them.
 
                                 User information relevant informations is provided in the following JSON format.
-                                {
-                                    ""userDetails"": {
-                                    ""name"": ""Ayoub"",
-                                    ""age"": 25,
-                                    ""gender"": ""Male"",
-                                    ""weight"": ""68 kg"",
-                                    ""height"": ""192 cm"",
-                                    ""activityLevel"": ""Regularly Active"",
-                                    ""foodAllergies"": [],
-                                    ""additionalAllergyNotes"": """",
-                                    ""healthConditions"": [""None""],
-                                    ""additionalHealthNotes"": """"
-                                    },
-                                    ""nutritionalGoals"": {
-                                    ""primaryGoal"": ""Weight Gain and build strong BIG muscles"",
-                                    ""secondaryGoals"": [""Build BIG strong muscles"",""Energy and Stamina Enhancement"", ""Digestive Health"", ""Mental Wellness and Focus""],
-                                    ""nutritionKnowledgeLevel"": ""Beginner"",
-                                    ""weightManagementSpecifics"": ""Fast Weight Gain"",
-                                    ""goalWeight"": ""75 kg"",
-                                    ""dietaryPreferences"": {
-                                        ""foodSource"": [""None Specified""],
-                                        ""macronutrientFocus"": [""Let our AI choose based on your nutritional goals (Recommended)""]
-                                    },
-                                    ""managingHealthConditions"": [""None""],
-                                    ""managingMentalHealthConditions"": [""None""],
-                                    ""additionalNutritionalInformation"": """"
-                                    },
-                                    ""mealPlanPreferences"": {
-                                    ""cookingSkillLevel"": ""Some Experience"",
-                                    ""mealSizePreference"": ""Larger Main Meals"",
-                                    ""favoriteCuisines"": [""Not Specified""],
-                                    ""favoriteDishCategories"": [""Pasta Dishes"", ""Grilled Foods"", ""Stir-Fries""],
-                                    ""groceryListPreferences"": {
-                                        ""shoppingStyle"": ""Balanced"",
-                                        ""stapleItems"": [""Not Specified""],
-                                        ""dislikedIngredients"": [],
-                                        ""idealCookingTime"": ""Moderately Involved"",
-                                        ""kitchenAppliances"": [""Stove/Oven"", ""Blender""]
-                                    },
-                                    ""snackingHabits"": ""Occasionally"",
-                                    ""supplementUse"": [""Protein Powders""],
-                                    ""budgetConstraints"": ""Moderate Budget""
-                                    }
-                                }";
+                                {UserInputsJson}";
 
-            string userRecipeGenerationprompt = $@"Create a personalized and engaging recipe for this meal 
+            string userRecipeGenerationprompt = $@"Create a personalized and engaging recipe for this meal
 {meal.ToString()}
 Ensure the recipe is tailored to the user, with a friendly, chef-like tone, incorporating these specific elements:
 
-Personalized Introduction: Begin with a warm, personalized greeting, mentioning the user's name and introducing the recipe.
+## Introduction
+	Begin with a warm, personalized greeting, mentioning the user's name and introducing the recipe.
+	Recipe Name and Description: Clearly state the recipe name and provide an engaging description, highlighting why this meal is beneficial for the user.
 
-Recipe Name and Description: Clearly state the recipe name and provide an engaging description, highlighting why this meal is beneficial for the user.
+## Ingredients
+	Detail the ingredients for one serving  with easy-to-follow quantities. (specify the serving size in the end explicitly based on the ingredients),
 
-Serving Size Clarification: Specify the serving size in grams for the final prepared dish, making it clear that this refers to the ready-to-serve meal.
+## Serving Size
+	based on the quantities of the ingredients Specify the serving size in grams for the final prepared dish, making it clear that this refers to the ready-to-serve meal.
 
-ingredients List: Detail the ingredients for one serving (specify it explicitly), with easy-to-follow quantities.
+## Detailed Cooking Instructions
+	specify each step, followed by a detailed, easy-to-follow explanation. Make the instructions engaging and motivating, encouraging users to enjoy the cooking process.
+	please follow this format : 
+		an clear introduction of this section
+		**Step 1:** detailed, easy-to-follow explanation for step 1
+		**Step x:** detailed, easy-to-follow explanation for step x, the more steps, the better
+		same for other steps...
 
-Appliances/Tools Needed: List the kitchen appliances and tools required to prepare the meal, ensuring users are well-prepared before starting.
+## Appliances/Tools Needed
+	based on the cooking instructions List the kitchen appliances and tools required to prepare the meal, ensuring users are well-prepared before starting.
 
-Detailed Cooking Instructions: Format each step in bold, followed by a detailed, easy-to-follow explanation. Make the instructions engaging and motivating, encouraging users to enjoy the cooking process. the more
+## Meal Timing Recommendations
+	Include advice on the best time of day to enjoy this meal, and when it might be less ideal, based on its nutritional content.
 
-Meal Timing Recommendations: Include advice on the best time of day to enjoy this meal, and when it might be less ideal, based on its nutritional content.
+## Macronutrients  Breakdown
+	At the end of the recipe, provide a detailed breakdown of macronutrients (calories, carbohydrates, proteins, fats) This is placed last to ensure the language model has full context of the ingredients, quantities, and serving size for more accurate calculations.
+	Calories: Total energy content of the meal, do not give a range specify an average of the total calories based on the ingredients, crucial for managing energy intake.
+	Carbohydrates: calculate the quantity in grams, includes the types (e.g., simple vs. complex) 
+	Proteins: calculate the quantity in grams
+	Fats: calculate the quantity in grams, Describes the types of fats present (saturated, unsaturated).
+	
+## Key micronutrients
+	Emphasizing each micronutrient(vitamins & minerals) and Fibers in the meal and in which ingredients it's presents and its health benefits and relevance to the user.
+
+## Health Benefits
+	This section offers a holistic view of the meal's nutritional profile, combining information on macronutrients, key micronutrients, and fibers. It showcases how each component contributes to the user's health and supports their health goals.
+
+## Conclusion
+	Conclude with a message that reinforces how this meal contributes to the user's health and enjoyment.
+
+it's imporant to respect the format of the markdown that we specified for you SPECIALLY THE HEADERS ##, so it'll be easier for us to parse by our app
 
 Markdown Format: Use Markdown for clear formatting, emphasizing important sections in bold.
-
-Personal Touch: Conclude with a message that reinforces how this meal contributes to the user's health and enjoyment.
-
-Macronutrient and Micronutrient Breakdown: At the end of the recipe, provide a detailed breakdown of macronutrients (calories, carbohydrates, proteins, fats) and key micronutrients emphasizing their health benefits and relevance to the user. This is placed last to ensure the language model has full context of the ingredients, quantities, and serving size for more accurate calculations.
-
-Conclude with a summary
 
 Note for GPT : Important data and conclusions should be bolded for emphasis
 
 Your goal is to create a recipe that is nutritionally informative, fun and easy to follow, and resonates personally with the user, inspiring them to confidently prepare and enjoy the meal.
 
-Food is not just to nourish the body
-
-Food nourishes the soul 
-
-You have to romance people
-
-It has to be something that makes people go, omg, I can't wait to get a fork and dig into that
+Food is not just to nourish the body, Food nourishes the soul, You have to romance people, It has to be something that makes people go, omg, I can't wait to get a fork and dig into that
 
 Use a conversational tone, as a chef is speaking directly to them, starting by greeting the user by their name.
 
-Important Note for GPT : PLZ DIRECTLY START BY GENERATING THE MARKDOWN, !!!DO NOT write something before like ""---"" or ""```markdown""
+Note for GPT : PLZ DIRECTLY START BY GENERATING THE MARKDOWN, !!!DO NOT write something before like ""---"" or ""```markdown""
 
 Start directly by the markdown header  : # The Title of the Recipe
 ";
-            chatRecipeGeneration.AppendSystemMessage(systemPrompt);
-            chatRecipeGeneration.AppendUserInput(userRecipeGenerationprompt);
 
-            var chatRecipePromptResponse = await chatRecipeGeneration.GetResponseFromChatbotAsync();
+            var chatRecipeResponse = await _openAIService.GetResponseAsync(systemPrompt, userRecipeGenerationprompt, OpenAI_API.Models.Model.GPT4_Turbo, 4095);
 
-
-            return chatRecipePromptResponse;
+            return chatRecipeResponse;
         }
 
-        private Conversation CreateConversationGPT4(OpenAIAPI iOpenAIAPI)
-        {
-            _logger.LogInformation("CreateConversation: Starting creation of new conversation");
-
-            try
-            {
-                var chat = iOpenAIAPI.Chat.CreateConversation();
-
-                chat.RequestParameters.Temperature = 0.2;
-                chat.RequestParameters.MaxTokens = 5000;
-                chat.Model = OpenAI_API.Models.Model.GPT4;
-
-
-                _logger.LogInformation("CreateConversation: Successfully created a new conversation");
-
-                return chat;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError("CreateConversation: An error occurred while creating conversation: {Message}", ex.Message);
-                throw;
-            }
-        }
-
-        private Conversation CreateConversationGPT4_6000token(OpenAIAPI iOpenAIAPI)
-        {
-            _logger.LogInformation("CreateConversation: Starting creation of new conversation");
-
-            try
-            {
-                var chat = iOpenAIAPI.Chat.CreateConversation();
-
-                chat.RequestParameters.Temperature = 0.2;
-                chat.RequestParameters.MaxTokens = 6000;
-                chat.Model = OpenAI_API.Models.Model.GPT4;
-
-
-                _logger.LogInformation("CreateConversation: Successfully created a new conversation");
-
-                return chat;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError("CreateConversation: An error occurred while creating conversation: {Message}", ex.Message);
-                throw;
-            }
-        }
-
-
-        private string GenerateJsonBasedOnPromptResponse(OpenAIAPI iOpenAIAPI, string systemPromptJson, string userPromptJson)
-        {
-            _logger.LogInformation("CreateConversation: Starting creation of new conversation");
-
-            try
-            {
-                ChatRequest chatRequest = new ChatRequest()
-                {
-                    Model = "gpt-3.5-turbo-1106",
-                    Temperature = 0.0,
-                    MaxTokens = 1000,
-                    ResponseFormat = ChatRequest.ResponseFormats.JsonObject,
-                    Messages = new ChatMessage[] {
-                    new ChatMessage(ChatMessageRole.System, systemPromptJson),
-                    new ChatMessage(ChatMessageRole.User, userPromptJson)
-                }
-                };
-                var chat = iOpenAIAPI.Chat.CreateChatCompletionAsync(chatRequest).Result;
-
-
-                _logger.LogInformation("CreateConversation: Successfully created a new conversation");
-
-                return chat.Choices.FirstOrDefault().ToString();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError("CreateConversation: An error occurred while creating conversation: {Message}", ex.Message);
-                throw;
-            }
-        }
-
-        private Conversation CreateConversation(OpenAIAPI iOpenAIAPI)
-        {
-            _logger.LogInformation("CreateConversation: Starting creation of new conversation");
-
-            try
-            {
-                var chat = iOpenAIAPI.Chat.CreateConversation();
-
-                chat.RequestParameters.Temperature = 0.2;
-                chat.Model = OpenAI_API.Models.Model.ChatGPTTurbo;
-
-                _logger.LogInformation("CreateConversation: Successfully created a new conversation");
-
-                return chat;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError("CreateConversation: An error occurred while creating conversation: {Message}", ex.Message);
-                throw;
-            }
-        }
-
+        #region old unused code
         static async Task<string> DownloadAndSaveImage(string imageUrl, string imageName)
         {
             string directoryPath = @"C:\persoProjects\MealPlanner\MealgeniusFull\MealGenius_ui\mealsImages\newUserImages";
@@ -791,7 +456,7 @@ Start directly by the markdown header  : # The Title of the Recipe
                 if (response.IsSuccessStatusCode)
                 {
                     byte[] imageBytes = await response.Content.ReadAsByteArrayAsync();
-                    await File.WriteAllBytesAsync(localFilePath, imageBytes);
+                    await System.IO.File.WriteAllBytesAsync(localFilePath, imageBytes);
                     return localFilePath; // Return the local file path
                 }
             }
@@ -807,8 +472,16 @@ Start directly by the markdown header  : # The Title of the Recipe
             }
             return fileName;
         }
-
+        #endregion
     }
+
+    #region Models
+    public class MealTotalBreakdown
+    {
+        public MealData MealDetails;
+        public MealRecipeBreakdown MealInformation;
+    }
+
 
     public class MealData
     {
@@ -819,7 +492,20 @@ Start directly by the markdown header  : # The Title of the Recipe
         public List<string> Ingredients { get; set; }
     }
 
-
+    public class MealRecipeBreakdown
+    {
+        public string NameOfTheMeal { get; set; }
+        public string Introduction { get; set; }
+        public string Ingredients { get; set; }
+        public string ServingText { get; set; }
+        public List<string> DetailedCookingInstructions { get; set; }
+        public string AppliancesAndTools { get; set; }
+        public string MealTimingRecommendations { get; set; }
+        public string Macronutrients_Section { get; set; }
+        public string Key_Micronutrients { get; set; }
+        public string Health_Benefits { get; set; }
+        public string Conclusion { get; set; }
+    }
     public class Macronutrients
     {
         public string Proteins { get; set; }
@@ -832,13 +518,24 @@ Start directly by the markdown header  : # The Title of the Recipe
             return $"Proteins: {Proteins}, Carbohydrates: {Carbohydrates}, Fats: {Fats}, Calories: {Calories}";
         }
     }
+
+    public class Macronutrients_Pourcentage
+    {
+        public string ProteinPercentage { get; set; }
+        public string CarbsPercentage { get; set; }
+        public string FatsPercentage { get; set; }
+    }
     public class aMeal
     {
         public string MealName { get; set; }
         public List<string> MealType { get; set; }
-        public List<string> PreparationType { get; set; }
+        public string PreparationSkill { get; set; }
         public List<string> MoodSuitability { get; set; }
+        public List<string> Tags { get; set; }
+
         public Macronutrients Macronutrients { get; set; }
+        
+        public Macronutrients_Pourcentage Macronutrients_Pourcentage { get; set; }
         public List<string> Micronutrients { get; set; }
         public string ServingSize { get; set; }
         public List<string> Ingredients { get; set; }
@@ -846,6 +543,7 @@ Start directly by the markdown header  : # The Title of the Recipe
 
         public string Recipe { get; set; }  // <-- New property
 
+        public MealRecipeBreakdown mealRecipeBreakdown { get; set; }
         public string MealImage { get; set; }
 
         public override string ToString()
@@ -857,8 +555,8 @@ Start directly by the markdown header  : # The Title of the Recipe
             if (MealType != null && MealType.Any())
                 stringBuilder.AppendLine($"Meal Type: {string.Join(", ", MealType)}");
 
-            if (PreparationType != null && PreparationType.Any())
-                stringBuilder.AppendLine($"Preparation Type: {string.Join(", ", PreparationType)}");
+            if (PreparationSkill != null && PreparationSkill.Any())
+                stringBuilder.AppendLine($"Preparation Skill: {string.Join(", ", PreparationSkill)}");
 
             if (MoodSuitability != null && MoodSuitability.Any())
                 stringBuilder.AppendLine($"Mood Suitability: {string.Join(", ", MoodSuitability)}");
@@ -907,10 +605,5 @@ Start directly by the markdown header  : # The Title of the Recipe
             return stringBuilder.ToString();
         }
     }
-
-
-
-
-
-
+    #endregion
 }

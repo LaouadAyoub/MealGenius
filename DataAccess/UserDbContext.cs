@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using System.ComponentModel.DataAnnotations.Schema;
 using Newtonsoft.Json.Linq;
+using Azure.Storage.Blobs.Models;
 
 namespace MealGeniusBackend.DataAcess
 {
@@ -17,6 +18,9 @@ namespace MealGeniusBackend.DataAcess
         public DbSet<UserInput> UserInputs { get; set; }
         public DbSet<MealPlan> MealPlans { get; set; }
         public DbSet<UserDashboard> UserDashboards { get; set; }
+        public DbSet<GroceryItem> GroceryItems { get; set; }  // Ajout du nouveau DbSet
+        //ADD NotFoundGroceryItems as a new table a new DbSet
+        public DbSet<NotFoundGroceryItems> NotFoundGroceryItems { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -57,6 +61,25 @@ namespace MealGeniusBackend.DataAcess
                 .HasOne(m => m.User)
                 .WithMany()
                 .HasForeignKey(m => m.UserId);
+
+            // Configuration pour GroceryItem
+            builder.Entity<GroceryItem>(entity =>
+            {
+                entity.ToTable("GroceryItems");
+                entity.HasKey(e => e.GroceryItemId);
+                entity.Property(e => e.Name).IsRequired();
+                entity.Property(e => e.SimilarNames);  // La configuration dépend de vos besoins
+                entity.Property(e => e.Category).IsRequired();
+                entity.Property(e => e.ImageUrl).IsRequired();
+            });
+
+            builder.Entity<NotFoundGroceryItems>(entity =>
+            {
+                entity.ToTable("NotFoundGroceryItems");
+                entity.HasKey(e => e.GroceryItemId);
+                entity.Property(e => e.Name).IsRequired();
+                entity.Property(e => e.Category).IsRequired();
+            });
         }
     }
 
@@ -81,6 +104,10 @@ namespace MealGeniusBackend.DataAcess
         public string UserId { get; set; }  // This matches the IdentityUser Id type
         public UserTaskStatus Status { get; set; }  // Changed from string to TaskStatus enum
 
+        public UserMealsImagesStatus MealsImagesStatus { get; set; }
+
+        public UserOutputStatus UserOutputStatus { get; set; }
+
         public IdentityUser User { get; set; }
 
         // Navigation property
@@ -94,7 +121,21 @@ namespace MealGeniusBackend.DataAcess
     public enum UserTaskStatus
     {
         New,
-        InProgress,
+        Completed,
+        Failed
+    }
+
+    public enum UserOutputStatus
+    {
+        New,
+        DashboardCompleted,
+        MealPlanCompleted,
+        GroceryListCompleted
+    }
+    public enum UserMealsImagesStatus
+    {
+        NotStarted,
+        Ongoing,
         Completed,
         Failed
     }
@@ -127,6 +168,22 @@ namespace MealGeniusBackend.DataAcess
 
     }
 
+    public class GroceryItem
+    {
+        public Guid GroceryItemId { get; set; }
+        public string Name { get; set; }  // Nom principal de l'article d'épicerie, e.g., "Whey Protein"
+        public List<string> SimilarNames { get; set; }  // Noms similaires, e.g., "Protein Powder, Vanilla Whey Protein"
+        public string Category { get; set; }  // Catégorie de l'article, e.g., "Supplements"
+        public string ImageUrl { get; set; }  // URL de l'image de l'article
+    }
 
+    public class NotFoundGroceryItems
+    {
+        public Guid GroceryItemId { get; set; }
+        public string Name { get; set; } 
+        public string Category { get; set; }
+        public List<string> SimilarNames { get; set; }  // Noms similaires, e.g., "Protein Powder, Vanilla Whey Protein"
 
+        public string SimilarGroceryItemFound { get; set; }  // Ajout de cette propriété pour stocker le nom de l'article d'épicerie similaire trouvé
+    }
 }
