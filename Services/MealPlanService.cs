@@ -96,8 +96,13 @@ Plz follow the format of the JSON file provided in the following line :
 {MealRecipeBreakdow_JsonExample}";
                 var userMealsJson = await _openAIService.GenerateJsonBasedOnPromptResponseAsync(systemPromptJsonMealsGeneration, userPromptJsonMealsGeneration, 1000, model: "gpt-4-1106-preview", temperature: 0.8);
 
-                UserMealsRoot theUserMealsRoot = JsonConvert.DeserializeObject<UserMealsRoot>(userMealsJson);
+                UserMealsRoot? theUserMealsRoot = JsonConvert.DeserializeObject<UserMealsRoot>(userMealsJson);
 
+                if(theUserMealsRoot is null)
+                {
+                    _logger.LogError("UserMealsRoot is null");
+                    return;
+                }
                 //Meal Recipe and PostData Generation
                 var tasks = new List<Task>();
                 foreach (var meal in theUserMealsRoot.UserMeals)

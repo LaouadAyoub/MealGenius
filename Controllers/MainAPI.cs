@@ -137,7 +137,7 @@ namespace MealGeniusBackend.Controllers
                     .FirstOrDefaultAsync();
 
                 // If the task does not exist, create a new one
-                if (userTask == null || userTask.Status != UserTaskStatus.New)
+                if (userTask == null)
                 {
                     userTask = new UserTask
                     {
