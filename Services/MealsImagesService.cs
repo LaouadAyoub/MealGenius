@@ -52,10 +52,15 @@ namespace MealGeniusBackend.Services
 
                 var existingMealPlan = _dbContext.MealPlans.SingleOrDefault(mealPlan => mealPlan.TaskId == userTaskDTO.Id);
 
-                //if (userTask.MealsImagesStatus is UserMealsImagesStatus.Completed)
-                //{
-                //    return;
-                //}
+                if (userTask.MealsImagesStatus is UserMealsImagesStatus.Completed)
+                {
+                    return;
+                }
+                if (existingMealPlan is null)
+                {
+                    _logger.LogError("MealPlan not found");
+                    return;
+                }
 
 
                 // Generate First Json that contains the meals PreData

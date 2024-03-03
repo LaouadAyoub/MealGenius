@@ -2,8 +2,8 @@ version: '3.9'
 
 services:
   web:
-    image: meal-genius-full-azure-speed-optimised
-    container_name: meal-genius
+    image: meal-genius-backend
+    container_name: new-meal-genius
     ports:
       - 8080:5139
     environment:

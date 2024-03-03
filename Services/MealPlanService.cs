@@ -50,11 +50,17 @@ namespace MealGeniusBackend.Services
 
                 if (existingMealPlan is not null)
                 {
+                    _logger.LogInformation("MealPlan already exists");
                     return;
                 }
 
                 // Generate First Json that contains the meals PreData
                 string MealRecipeBreakdow_JsonExample = System.IO.File.ReadAllText("JsonFiles\\Meal_PreData_Generation.json");
+
+                if (MealRecipeBreakdow_JsonExample is not null)
+                { 
+                    _logger.LogInformation($"MealRecipeBreakdow_JsonExample found \n {MealRecipeBreakdow_JsonExample}");
+                }
 
                 var UserInputsJson = userInput.UserData;
                 string systemPromptJsonMealsGeneration = $@"You are an AI assistant for MealGenius, an app designed for personalized nutrition and meal planning.
@@ -89,7 +95,6 @@ Plz follow the format of the JSON file provided in the following line :
 
 {MealRecipeBreakdow_JsonExample}";
                 var userMealsJson = await _openAIService.GenerateJsonBasedOnPromptResponseAsync(systemPromptJsonMealsGeneration, userPromptJsonMealsGeneration, 1000, model: "gpt-4-1106-preview", temperature: 0.8);
-
 
                 UserMealsRoot theUserMealsRoot = JsonConvert.DeserializeObject<UserMealsRoot>(userMealsJson);
 

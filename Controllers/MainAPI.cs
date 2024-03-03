@@ -123,7 +123,7 @@ namespace MealGeniusBackend.Controllers
             try
             {
                 // Get the current authenticated user
-                var user = await _userManager.FindByNameAsync(User.Identity.Name);
+                var user = await _userManager.FindByNameAsync(User?.Identity?.Name);
                 if (user == null)
                 {
                     _logger.LogWarning("ExecuteUserTask: User not found or not authenticated.");

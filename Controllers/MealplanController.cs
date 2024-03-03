@@ -28,7 +28,7 @@ namespace MealGeniusBackend.Controllers
         public async Task<IActionResult> GetMealPlan()
         {
             // Get the current authenticated user
-            var user = await _userManager.FindByNameAsync(User.Identity.Name);
+            var user = await _userManager.FindByNameAsync(User?.Identity?.Name);
             if (user == null)
             {
                 return Unauthorized();
@@ -61,7 +61,7 @@ namespace MealGeniusBackend.Controllers
         public async Task<IActionResult> GetGroceryList()
         {
             // Get the current authenticated user
-            var user = await _userManager.FindByNameAsync(User.Identity.Name);
+            var user = await _userManager.FindByNameAsync(User?.Identity?.Name);
             if (user == null)
             {
                 return Unauthorized();
@@ -75,7 +75,7 @@ namespace MealGeniusBackend.Controllers
                                   .FirstOrDefaultAsync();
             if (userGroceryList == null)
             {
-                return NotFound("User dashboard not found.");
+                return NotFound("User groceryList not found.");
             }
 
             var userGroceryListJson = JsonConvert.DeserializeObject<GroceryCategoriesDetailed>(userGroceryList.GroceryListJson);

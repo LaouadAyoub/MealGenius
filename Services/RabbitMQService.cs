@@ -18,6 +18,8 @@ namespace MealGeniusBackend.Services
 
         public RabbitMQService(IServiceScopeFactory serviceScopeFactory, ILogger<RabbitMQService> logger)
         {
+            _logger = logger;
+
             try
             {
                 var factory = new ConnectionFactory()
@@ -33,7 +35,6 @@ namespace MealGeniusBackend.Services
                 _channel.QueueDeclare(queue: "task_queue", durable: true, exclusive: false, autoDelete: false, arguments: null);
 
                 _serviceScopeFactory = serviceScopeFactory;
-                _logger = logger;
 
                 _logger.LogInformation("RabbitMQ Service has been initialized.");
             }
