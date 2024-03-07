@@ -61,7 +61,7 @@ namespace MealGeniusBackend.Services
                     throw new Exception("No meal plan found to generate the grocery list");
                 }
 
-                if (existingMealPlan.GroceryListJson.IsNullOrEmpty())
+                if (existingMealPlan.GroceryListJson.IsNullOrEmpty() || true)
                 {
                     //Deserialize the meal plan json
                     var myMealPlan = JsonConvert.DeserializeObject<UserMealsRoot>(existingMealPlan.MealPlanJson);
@@ -364,7 +364,7 @@ The JSON structure should follow this Jsonformat:{groceryList_JsonExample}
         In similar names, you have to list also different names or nominations of the grocery item, for example, for Apple, we can find an image for Apples for example, the goal is to find an image for the grocery item that can be used for all the similar names of the grocery item, and to minimize the number of the image generated.
         GroceryItemName: Name of the grocery item
         SimilarNames : [List of similar names of the grocery item, Apples, Fresh apple]
-        Benefits: Benefits of this GroceryItem,
+        Benefits: Health benefits of this GroceryItem for the user explained simply and clearly.
         Essential_Nutrients: [Iron , Vitamin A, Protein]           // List the essentiel nutrients presented this this GroceryItemn
 
         The list of grocery items is as follows:

@@ -285,10 +285,10 @@ Ensure the recipe is tailored to the user, with a friendly, chef-like tone, inco
 
 ## Detailed Cooking Instructions
 	specify each step, followed by a detailed, easy-to-follow explanation. Make the instructions engaging and motivating, encouraging users to enjoy the cooking process.
-	please follow this format : 
-		an clear introduction of this section
-		**Step 1:** detailed, easy-to-follow explanation for step 1
-		**Step x:** detailed, easy-to-follow explanation for step x, the more steps, the better
+	please follow this format in bullet points: 
+		- Step 1: detailed, easy-to-follow explanation for step 1
+		- Step 2: detailed, easy-to-follow explanation for step 2
+		- Step x: detailed, easy-to-follow explanation for step x, the more steps, the better
 		same for other steps...
 
 ## Appliances/Tools Needed
@@ -396,7 +396,7 @@ Start directly by the markdown header  : # The Title of the Recipe
         public string Introduction { get; set; }
         public string Ingredients { get; set; }
         public string ServingText { get; set; }
-        public List<string> DetailedCookingInstructions { get; set; }
+        public string DetailedCookingInstructions { get; set; }
         public string AppliancesAndTools { get; set; }
         public string MealTimingRecommendations { get; set; }
         public string Macronutrients_Section { get; set; }

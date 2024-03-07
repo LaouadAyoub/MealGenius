@@ -4,7 +4,7 @@
       {
         "GroceryItemName": "Name of the grocery item",
         "SimilarNames": [ "Similar names of this grocery item", "Similar names of this grocery item" ],
-        "Benefits": "Benefits of this GroceryItem",
+        "Benefits": "Health benefits of this GroceryItem for the user explained simply and clearly",
         "Essential_Nutrients": [ "List the essentiel nutrients present this this GroceryItem", "Vitamin A", "Protein", "Fiber", "Omega3" ]
       },
       {
@@ -12,17 +12,6 @@
         "SimilarNames": [ "Greek-style Yogurt", "Natural Greek Yogurt" ],
         "Benefits": "Creamy, dreamy, and rich in probiotics, Greek yogurt is your gut's best friend. It's the superhero of snacks, battling hunger while fortifying your fortress of well-being.",
         "Essential_Nutrients": [ "Calcium", "Protein", "Probiotics", "Vitamin B12" ]
-      },
-      {
-        "GroceryItemName": "Vanilla Protein Powder",
-        "SimilarNames": [ "Protein Powder", "Whey Protein" ],
-        "Benefits": "A twist on the classic muscle-builder, vanilla protein powder is a taste bud tantalizer that doesn't skimp on nutrition. It's like a dessert for your muscles, making gains while tickling your taste preferences.",
-        "EssentialNutrients": [
-          "Protein",
-          "Branched-Chain Amino Acids (BCAAs)",
-          "Calcium",
-          "Phosphorus"
-        ]
       },
       {
         "GroceryItemName": "Banana",

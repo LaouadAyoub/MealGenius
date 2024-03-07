@@ -16,11 +16,7 @@
     "Introduction": "All the introduction with markdown format",
     "Ingredients": "all the content of the Ingredients section, keeping it in markdown format, replace line breaks with \\n escape section",
     "ServingText": "all the content of the Serving Size section keeping it in markdown format, replace line breaks with \\n escape section",
-    "DetailedCookingInstructions": [
-      "All the content of the step one keeping it in markdown format, replace line breaks with \\n escape section",
-      "All the text of the step two keeping it in markdown format, replace line breaks with \\n escape section",
-      "All the text of the step three keeping it in markdown format, replace line breaks with \\n escape section"
-    ],
+    "DetailedCookingInstructions": "All the content of the Detailed Cooking Instructions keeping it in markdown format, replace line breaks with \\n escape section",
     "AppliancesAndTools": "all the content of the Appliances/Tools Needed section keeping it in markdown format, replace line breaks with \\n escape section",
     "MealTimingRecommendations": "all the content of the Meal Timing Recommendations section keeping it in markdown format, replace line breaks with \\n escape section",
     "Macronutrients_Section": "all the content of the Macronutrient Breakdown section keeping it in markdown format, replace line breaks with \\n escape section",

@@ -13,7 +13,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenAI-Function-calling", "
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PixabayAPIExample", "..\PixabayAPIExample\PixabayAPIExample.csproj", "{9C87E476-92B8-45EF-9F9D-90425BBCDEBF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GroceryList_ImageGenerator", "..\GroceryList_ImageGenerator\GroceryList_ImageGenerator.csproj", "{F7E910C5-DB14-4DBA-98BC-4C07AE1A73B5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GroceryList_ImageGenerator", "..\GroceryList_ImageGenerator\GroceryList_ImageGenerator.csproj", "{F7E910C5-DB14-4DBA-98BC-4C07AE1A73B5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MigrationData_Local_Azure", "..\MigrationData_Local_Azure\MigrationData_Local_Azure.csproj", "{4A9DDEF9-01CE-4218-999F-94EB17489A68}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -45,6 +47,10 @@ Global
 		{F7E910C5-DB14-4DBA-98BC-4C07AE1A73B5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F7E910C5-DB14-4DBA-98BC-4C07AE1A73B5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F7E910C5-DB14-4DBA-98BC-4C07AE1A73B5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4A9DDEF9-01CE-4218-999F-94EB17489A68}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4A9DDEF9-01CE-4218-999F-94EB17489A68}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4A9DDEF9-01CE-4218-999F-94EB17489A68}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4A9DDEF9-01CE-4218-999F-94EB17489A68}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
