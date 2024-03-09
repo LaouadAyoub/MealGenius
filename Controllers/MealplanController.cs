@@ -90,7 +90,10 @@ namespace MealGeniusBackend.Controllers
                     {
                         if (item.GroceryItemName == groceryItem.Name)
                         {
-                            item.GroceryItem_ImageUrl = groceryItem.CompressedImageUrl;
+                            if(!string.IsNullOrEmpty(groceryItem.CompressedImageUrl))
+                            {
+                                groceryItem.CompressedImageUrl = groceryItem.ImageUrl;
+                            }
                         }
                     }
                 }
