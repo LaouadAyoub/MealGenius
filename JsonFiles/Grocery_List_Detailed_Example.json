@@ -4,21 +4,21 @@
       {
         "GroceryItemName": "Name of the grocery item",
         "SimilarNames": [ "Similar names of this grocery item", "Similar names of this grocery item" ],
-        "Benefits": "Health benefits of this GroceryItem for the user explained simply and clearly",
+        "HealthBenefits": "Health benefits of this GroceryItem for the user explained simply and clearly",
         "Essential_Nutrients": [ "List the essentiel nutrients present this this GroceryItem", "Vitamin A", "Protein", "Fiber", "Omega3" ]
       },
       {
         "GroceryItemName": "Greek Yogurt",
         "SimilarNames": [ "Greek-style Yogurt", "Natural Greek Yogurt" ],
-        "Benefits": "Creamy, dreamy, and rich in probiotics, Greek yogurt is your gut's best friend. It's the superhero of snacks, battling hunger while fortifying your fortress of well-being.",
+        "HealthBenefits": "Creamy, dreamy, and rich in probiotics, Greek yogurt is your gut's best friend. It's the superhero of snacks, battling hunger while fortifying your fortress of well-being.",
         "Essential_Nutrients": [ "Calcium", "Protein", "Probiotics", "Vitamin B12" ]
       },
       {
         "GroceryItemName": "Banana",
         "SimilarNames": [ "Bananas", "Ripe Banana", "Fresh Banana" ],
-        "Benefits": "Bananas are a great source of quick energy and are rich in...",
+        "HealthBenefits": "Bananas are a great source of quick energy and are rich in...",
         "EssentialNutrients": [
-          "Vitamin B6",
+          "Vitamin B6", 
           "Vitamin C",
           "Dietary Fiber",
           "Manganese"

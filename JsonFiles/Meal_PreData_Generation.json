@@ -16,7 +16,7 @@
       "MealName": "Zen Berry Yogurt Parfait",
       "MealType": [ "Breakfast", "Snack" ],
       "PreparationSkill": "Beginner",
-      "MoodSuitability": [ "Soul Soother (same as the second meal, which is good)", "Morning Kickstart" ]
+      "MoodSuitability": [ "Soul Soother", "Morning Kickstart" ]
     },
     {
       "MealName": "Tranquil Truffle Risotto",
@@ -28,7 +28,7 @@
       "MealName": "Harmony Herbal Tea Blend",
       "MealType": [ "Snack", "Dessert" ],
       "PreparationSkill": "Easy",
-      "MoodSuitability": [ "Soul Soother (same as the second meal, which is good)", "Dreamy Indulgence" ]
+      "MoodSuitability": [ "Soul Soother", "Dreamy Indulgence" ]
     }
   ]
 }

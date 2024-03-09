@@ -240,7 +240,8 @@ namespace MealGeniusBackend.Services
                 if (!string.IsNullOrEmpty(imageUrl))
                 {
                     //updload the image on azure blob storage
-                    var imageBlobUrl = await _azureBlobService.UploadImageAsync(imageUrl);
+                    var imageBlobUrl = await _azureBlobService.UploadImageCompressedAsync(imageUrl);
+                    //var imageBlobUrl = await _azureBlobService.UploadImageAsync(imageUrl);
                     aMeal.MealImage = imageBlobUrl;
                 }
 

@@ -54,10 +54,8 @@ public class Startup
             var openaiApiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
             var connectionString = Environment.GetEnvironmentVariable("MEALGENIUS_CONNECTIONSTRING");
 
-            //var connectionString = Configuration.GetConnectionString("ConnectionStrings");
             services.AddDbContext<UserDbContext>(options =>
-                options.UseNpgsql(
-                    Environment.GetEnvironmentVariable("MEALGENIUS_CONNECTIONSTRING")));
+                options.UseNpgsql(connectionString));
 
 
             services.AddLogging(loggingBuilder =>

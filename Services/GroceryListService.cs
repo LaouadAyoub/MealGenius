@@ -156,10 +156,6 @@ The JSON structure should follow this Jsonformat:{groceryList_JsonExample}
                         if(!groceryItem.GroceryItem_ImageUrl.IsNullOrEmpty())
                             continue;
 
-                        if (groceryItem.GroceryItemName == "Thyme")
-                        {
-                        
-                        }
                         // verifier si l'image du groceryItem existe dans la table GroceryItemImages
                         //public DbSet<GroceryItem> GroceryItems { get; set; }  // Ajout du nouveau DbSet
 
@@ -364,7 +360,7 @@ The JSON structure should follow this Jsonformat:{groceryList_JsonExample}
         In similar names, you have to list also different names or nominations of the grocery item, for example, for Apple, we can find an image for Apples for example, the goal is to find an image for the grocery item that can be used for all the similar names of the grocery item, and to minimize the number of the image generated.
         GroceryItemName: Name of the grocery item
         SimilarNames : [List of similar names of the grocery item, Apples, Fresh apple]
-        Benefits: Health benefits of this GroceryItem for the user explained simply and clearly.
+        Health benefits: Health benefits of this GroceryItem for the user explained simply and clearly.
         Essential_Nutrients: [Iron , Vitamin A, Protein]           // List the essentiel nutrients presented this this GroceryItemn
 
         The list of grocery items is as follows:
@@ -427,7 +423,7 @@ The JSON structure should follow this Jsonformat:{groceryList_JsonExample}
         [JsonProperty("SimilarNames")]
         public List<string> SimilarNames { get; set; }
 
-        [JsonProperty("Benefits")]
+        [JsonProperty("HealthBenefits")]
         public string Benefits { get; set; }
 
         [JsonProperty("Essential_Nutrients")]

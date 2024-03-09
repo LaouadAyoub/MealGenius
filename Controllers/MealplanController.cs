@@ -73,6 +73,7 @@ namespace MealGeniusBackend.Controllers
                                   .OrderByDescending(m => m.CreatedAt)
                                   .Select(m => new { m.GroceryListJson })
                                   .FirstOrDefaultAsync();
+
             if (userGroceryList == null)
             {
                 return NotFound("User groceryList not found.");
@@ -80,13 +81,29 @@ namespace MealGeniusBackend.Controllers
 
             var userGroceryListJson = JsonConvert.DeserializeObject<GroceryCategoriesDetailed>(userGroceryList.GroceryListJson);
 
-            var serializerSettings = new JsonSerializerSettings
+            var groceryItems = _dbcontext.GroceryItems.ToList();
+            foreach (var category in userGroceryListJson.GroceryCategories)
             {
-                ContractResolver = new IgnorePropertiesResolver(new[] { "SimilarNames" })
-            };
+                foreach(var item in category.GroceryItems)
+                {
+                    foreach(var groceryItem in groceryItems)
+                    {
+                        if (item.GroceryItemName == groceryItem.Name)
+                        {
+                            item.GroceryItem_ImageUrl = groceryItem.CompressedImageUrl;
+                        }
+                    }
+                }
+            }
 
-            // Serialize your object with the custom settings
-            var json = JsonConvert.SerializeObject(userGroceryListJson, serializerSettings);
+
+            //var serializerSettings = new JsonSerializerSettings
+            //{
+            //    ContractResolver = new IgnorePropertiesResolver(new[] { "SimilarNames" })
+            //};
+
+            //// Serialize your object with the custom settings
+            //var json = JsonConvert.SerializeObject(userGroceryListJson, serializerSettings);
 
             return Ok(userGroceryListJson);
         }

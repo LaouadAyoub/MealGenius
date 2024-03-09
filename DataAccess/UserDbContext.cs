@@ -175,6 +175,8 @@ namespace MealGeniusBackend.DataAcess
         public List<string> SimilarNames { get; set; }  // Noms similaires, e.g., "Protein Powder, Vanilla Whey Protein"
         public string Category { get; set; }  // Catégorie de l'article, e.g., "Supplements"
         public string ImageUrl { get; set; }  // URL de l'image de l'article
+
+        public string CompressedImageUrl { get; set; }  
     }
 
     public class NotFoundGroceryItems
