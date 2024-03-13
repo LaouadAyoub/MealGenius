@@ -81,23 +81,23 @@ namespace MealGeniusBackend.Controllers
 
             var userGroceryListJson = JsonConvert.DeserializeObject<GroceryCategoriesDetailed>(userGroceryList.GroceryListJson);
 
-            var groceryItems = _dbcontext.GroceryItems.ToList();
-            foreach (var category in userGroceryListJson.GroceryCategories)
-            {
-                foreach(var item in category.GroceryItems)
-                {
-                    foreach(var groceryItem in groceryItems)
-                    {
-                        if (item.GroceryItemName == groceryItem.Name)
-                        {
-                            if(!string.IsNullOrEmpty(groceryItem.CompressedImageUrl))
-                            {
-                                groceryItem.CompressedImageUrl = groceryItem.ImageUrl;
-                            }
-                        }
-                    }
-                }
-            }
+            //var groceryItems = _dbcontext.GroceryItems.ToList();
+            //foreach (var category in userGroceryListJson.GroceryCategories)
+            //{
+            //    foreach(var item in category.GroceryItems)
+            //    {
+            //        foreach(var groceryItem in groceryItems)
+            //        {
+            //            if (item.GroceryItemName == groceryItem.Name)
+            //            {
+            //                if(!string.IsNullOrEmpty(groceryItem.CompressedImageUrl))
+            //                {
+            //                    item.GroceryItem_ImageUrl = groceryItem.CompressedImageUrl;
+            //                }
+            //            }
+            //        }
+            //    }
+            //}
 
 
             //var serializerSettings = new JsonSerializerSettings

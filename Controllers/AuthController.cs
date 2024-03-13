@@ -30,16 +30,38 @@ namespace MealGeniusBackend.Controllers
         [HttpPost("Login")]
         public async Task<IActionResult> Login(UserLoginDto userLoginDto)
         {
+            IdentityUser user = null;
 
-            var user = await _userManager.FindByNameAsync(userLoginDto.Username);
-            
+            // Check if the input is an email
+            if (userLoginDto.Username.Contains("@"))
+            {
+                user = await _userManager.FindByEmailAsync(userLoginDto.Username);
+            }
+            else
+            {
+                user = await _userManager.FindByNameAsync(userLoginDto.Username);
+            }
+
             if (user == null || !await _userManager.CheckPasswordAsync(user, userLoginDto.Password))
             {
                 return Unauthorized();
             }
-
             var token = await _authService.GenerateToken(user);
-            return Ok(new { Token = token });
+
+            // Set the token in an HttpOnly cookie
+            var cookieOptions = new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true, // Set to true if using HTTPS. If you're in development (likely using HTTP), this can be set based on the request or environment.
+                SameSite = SameSiteMode.Strict, // Helps mitigate CSRF. Consider Lax if you need cross-site requests.
+                Expires = DateTime.UtcNow.AddDays(1), // Align with your token's expiration
+            };
+
+            Response.Cookies.Append("AuthToken", token, cookieOptions);
+
+            // Optionally return a simple message indicating success
+            return Ok(new { Message = "Login successful" });
         }
+
     }
 }

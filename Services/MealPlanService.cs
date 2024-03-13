@@ -19,6 +19,14 @@ namespace MealGeniusBackend.Services
 
     public class MealPlanService : IMealPlanService
     {
+        private readonly List<string> mealBackgroundcolors = new List<string>
+        {
+            "#F0EBFB", "#EEFBEB", "#E8EEF9", "#F4EAFA", "#E6FAF9",
+            "#EBEEF8", "#EAF6F6", "#EAEBF6", "#F9E9F2", "#FDEAE7",
+            "#F2EBF9", "#E9F5F9", "#F6EBFC", "#EDFEE8", "#F5EAFD",
+            "#E9FBFD", "#FAF7EE", "#E8F6F1", "#FBE8FB", "#F9FCE7"
+        };
+        private readonly Random random = new Random();
         private readonly UserDbContext _dbContext;
         private readonly ILogger<MealPlanService> _logger;
         private readonly IOpenAIService _openAIService;
@@ -207,6 +215,8 @@ write the content of each section without rewriting the title of the section plz
             meal.ServingSize = MealDataBreakdownJson.MealDetails.ServingSize;
             meal.Ingredients = MealDataBreakdownJson.MealDetails.Ingredients;
 
+            meal.MealBackgroundColor = GetRandomMealBgColor();
+
             var macroPourcentage = CalculateMacronutrientPercentagesFromString(meal.Macronutrients.Calories, meal.Macronutrients.Carbohydrates, meal.Macronutrients.Proteins, meal.Macronutrients.Fats);
 
             meal.Macronutrients_Pourcentage = new Macronutrients_Pourcentage
@@ -217,7 +227,7 @@ write the content of each section without rewriting the title of the section plz
             };
         }
 
-        public (string CarbsPercentage, string ProteinPercentage, string FatsPercentage) CalculateMacronutrientPercentagesFromString(
+        private (string CarbsPercentage, string ProteinPercentage, string FatsPercentage) CalculateMacronutrientPercentagesFromString(
             string totalCaloriesStr, string carbsStr, string proteinStr, string fatsStr)
         {
             try
@@ -335,6 +345,11 @@ Start directly by the markdown header  : # The Title of the Recipe
             return chatRecipeResponse;
         }
 
+        private string GetRandomMealBgColor()
+        {
+            int randomIndex = random.Next(mealBackgroundcolors.Count);
+            return mealBackgroundcolors[randomIndex];
+        }
         #region old unused code
         static async Task<string> DownloadAndSaveImage(string imageUrl, string imageName)
         {
@@ -443,6 +458,8 @@ Start directly by the markdown header  : # The Title of the Recipe
 
         public MealRecipeBreakdown mealRecipeBreakdown { get; set; }
         public string MealImage { get; set; }
+
+        public string MealBackgroundColor { get; set; }
 
         public override string ToString()
         {

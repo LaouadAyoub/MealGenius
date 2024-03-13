@@ -1,6 +1,4 @@
 ﻿using MealGeniusBackend.DataAccess;
-using MealGeniusBackend.DataAcess;
-//using MealGeniusBackend.Models.UserModel;
 using MealGeniusBackend.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -13,7 +11,8 @@ using System.Text;
 using FluentEmail.Mailgun;
 using Microsoft.OpenApi.Models;
 using System.Reflection;
-
+using MealGeniusBackend.DataAcess;
+using Microsoft.Extensions.DependencyInjection;
 
 public class Startup
 {
@@ -28,127 +27,70 @@ public class Startup
     {
         try
         {
-            //var stripeSecretKey = Environment.GetEnvironmentVariable("STRIPE_SECRET_KEY");
-
-            //StripeConfiguration.ApiKey = stripeSecretKey;
-
+            // API Controllers and JSON Options
             services.AddControllers().AddJsonOptions(options =>
             {
                 options.JsonSerializerOptions.PropertyNamingPolicy = null;
             });
 
+            // CORS Policy Configuration
             services.AddCors(options =>
             {
-                options.AddPolicy("AllowAll",
-                    builder =>
-                    {
-                        builder
-                        .AllowAnyOrigin()
-                        .AllowAnyMethod()
-                        .AllowAnyHeader();
-                    });
+                options.AddPolicy("AllowAll", builder =>
+                {
+                    builder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
+                });
             });
-            // Set the default API authentication using the environment variable
-            APIAuthentication.Default = new APIAuthentication(Environment.GetEnvironmentVariable("OPENAI_API_KEY"));
 
+            // OpenAI Configuration
             var openaiApiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
+            APIAuthentication.Default = new APIAuthentication(openaiApiKey);
+
+            // Database Context Configuration
             var connectionString = Environment.GetEnvironmentVariable("MEALGENIUS_CONNECTIONSTRING");
+            services.AddDbContext<UserDbContext>(options => options.UseNpgsql(connectionString));
 
-            services.AddDbContext<UserDbContext>(options =>
-                options.UseNpgsql(connectionString));
-
-
+            // Logging Configuration
             services.AddLogging(loggingBuilder =>
             {
                 loggingBuilder.ClearProviders();
                 loggingBuilder.AddNLog();
             });
 
-
-            services.AddScoped<IOpenAIService, OpenAIService>();
-
-            services.AddScoped<IMealPlanService, MealPlanService>();
-            services.AddScoped<IUserDashboardService, UserDashboardService>();
-            services.AddScoped<IGroceryListService, GroceryListService>();
-            services.AddScoped<IMealsImagesService, MealsImagesService>();
-            services.AddScoped<IAuthService, AuthService>();
-            services.AddScoped<IUserService, UserService>();
-            services.AddHostedService<RabbitMQConsumerHostedService>();
-            services.AddSingleton<RabbitMQService>();
-            services.AddSingleton<OpenAIAPI>();
-            services.AddIdentity<IdentityUser, IdentityRole>()
-                    .AddEntityFrameworkStores<UserDbContext>()
-                    .AddDefaultTokenProviders();
-
-            // Set up FluentEmail services
+            // FluentEmail configuration
             services
                 .AddFluentEmail("redacted@example.invalid")
                 .AddMailGunSender(
                 Configuration["Mailgun:Domain"],
                 Configuration["Mailgun:ApiKey"]
-            );
-            services.AddScoped<IEmailService, EmailService>();
-            services.AddHttpClient<ImageService>();
+ );
 
-            services.AddSwaggerGen(c =>
-            {
-                c.SwaggerDoc("v1", new OpenApiInfo { Title = "MealGenius", Version = "v1" });
+            // Application Services Registration
+            RegisterApplicationServices(services);
 
-                var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
-                var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
-                c.IncludeXmlComments(xmlPath);
-            });
+            // Authentication and Identity Configuration
+            ConfigureAuthentication(services);
 
+            // Swagger Generation Configuration
+            ConfigureSwagger(services);
 
-            services.AddAuthentication(
-                options =>
-                {
-                    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-                }
-                )
-                .AddJwtBearer(options =>
-                {
-                    options.TokenValidationParameters = new TokenValidationParameters()
-                    {
-                        // Validate the token issuer
-                        ValidateIssuer = true,
-                        ValidIssuer = Configuration["JwtConfig:Issuer"],
-
-                        // Validate the token audience
-                        ValidateAudience = true,
-                        ValidAudience = Configuration["JwtConfig:Audience"],
-
-                        // Validate the token expiry
-                        ValidateLifetime = true,
-
-                        // Validate the token signing key
-                        ValidateIssuerSigningKey = true,
-                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Configuration["JwtConfig:Key"]))
-                    };
-                });
-            services.AddTransient<UserDbContextSeeder>();
-
-            // configure azure blob storage
-            services.AddHttpClient();
-            services.Configure<AzureStorageConfig>(Configuration.GetSection("AzureStorageConfig"));
-            services.AddSingleton<IAzureBlobService, AzureBlobService>();
+            // Azure Blob Storage Configuration
+            ConfigureAzureBlobStorage(services);
         }
         catch (Exception ex)
         {
-            // log the exception
+            // Log the exception
             var logger = NLog.LogManager.GetCurrentClassLogger();
             logger.Error(ex, "An error occurred while setting up the services.");
             throw;
         }
-
-
     }
 
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
     {
         try
         {
+            // Environment Configuration
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
@@ -158,30 +100,107 @@ public class Startup
                 app.UseHttpsRedirection(); // Redirect HTTP to HTTPS.
             }
 
+            // Middleware Configuration
             app.UseDefaultFiles();
             app.UseStaticFiles();
             app.UseCors("AllowAll");
             app.UseRouting();
             app.UseAuthentication();
             app.UseAuthorization();
-            app.UseSwagger();
-            app.UseSwaggerUI(c =>
-            {
-                c.SwaggerEndpoint("/swagger/v1/swagger.json", "MealGenius Swagger");
-            });
 
-            app.UseEndpoints(endpoints =>
-            {
-                endpoints.MapControllers();
-            });
+            // Swagger Middleware Configuration
+            app.UseSwagger();
+            app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "MealGenius Swagger"));
+
+            // Endpoint Configuration
+            app.UseEndpoints(endpoints => endpoints.MapControllers());
         }
         catch (Exception ex)
         {
-            // log the exception
+            // Log the exception
             var logger = NLog.LogManager.GetCurrentClassLogger();
             logger.Error(ex, "An error occurred while setting up the endpoint routing.");
             throw;
-
         }
+    }
+
+    private void RegisterApplicationServices(IServiceCollection services)
+    {
+        // Scoped services for application logic
+        services.AddScoped<IOpenAIService, OpenAIService>();
+        services.AddScoped<IMealPlanService, MealPlanService>();
+        services.AddScoped<IUserDashboardService, UserDashboardService>();
+        services.AddScoped<IGroceryListService, GroceryListService>();
+        services.AddScoped<IMealsImagesService, MealsImagesService>();
+        services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IUserService, UserService>();
+        services.AddScoped<IEmailService, EmailService>();
+
+        // Hosted services
+        services.AddHostedService<RabbitMQConsumerHostedService>();
+
+        // Singleton services
+        services.AddSingleton<RabbitMQService>();
+        services.AddSingleton<OpenAIAPI>();
+        services.AddHttpClient<ImageService>();
+    }
+
+    private void ConfigureAuthentication(IServiceCollection services)
+    {
+        services.AddIdentity<IdentityUser, IdentityRole>()
+                .AddEntityFrameworkStores<UserDbContext>()
+                .AddDefaultTokenProviders();
+
+        services.AddAuthentication(options =>
+        {
+            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        })
+            .AddJwtBearer(options =>
+            {
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidIssuer = Configuration["JwtConfig:Issuer"],
+                    ValidateAudience = true,
+                    ValidAudience = Configuration["JwtConfig:Audience"],
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Configuration["JwtConfig:Key"]))
+                };
+
+                // Retrieve token from cookies
+                options.Events = new JwtBearerEvents
+                {
+                    OnMessageReceived = context =>
+                    {
+                        var accessToken = context.Request.Cookies["AuthToken"];
+                        if (!string.IsNullOrEmpty(accessToken))
+                        {
+                            context.Token = accessToken;
+                        }
+                        return Task.CompletedTask;
+                    }
+                };
+            });
+    }
+
+    private void ConfigureSwagger(IServiceCollection services)
+    {
+        services.AddSwaggerGen(c =>
+        {
+            c.SwaggerDoc("v1", new OpenApiInfo { Title = "MealGenius", Version = "v1" });
+
+            var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+            var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+            c.IncludeXmlComments(xmlPath);
+        });
+    }
+
+    private void ConfigureAzureBlobStorage(IServiceCollection services)
+    {
+        services.AddHttpClient();
+        services.Configure<AzureStorageConfig>(Configuration.GetSection("AzureStorageConfig"));
+        services.AddSingleton<IAzureBlobService, AzureBlobService>();
     }
 }

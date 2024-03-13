@@ -61,29 +61,32 @@ namespace MealGeniusBackend.Services
                     throw new Exception("No meal plan found to generate the grocery list");
                 }
 
-                if (existingMealPlan.GroceryListJson.IsNullOrEmpty() || true)
+                if (!existingMealPlan.GroceryListJson.IsNullOrEmpty())
                 {
-                    //Deserialize the meal plan json
-                    var myMealPlan = JsonConvert.DeserializeObject<UserMealsRoot>(existingMealPlan.MealPlanJson);
+                    return;
+                }
 
-                    var groceryList_JsonExamplePath = "JsonFiles/Grocery_List_Example.json";
-                    string groceryList_JsonExample = File.ReadAllText(groceryList_JsonExamplePath);
+                //Deserialize the meal plan json
+                var myMealPlan = JsonConvert.DeserializeObject<UserMealsRoot>(existingMealPlan.MealPlanJson);
 
-                    var UserInputsJson = userInput.UserData;
-                    //GroceryList Generation
-                    string systemPromptGroceryListGeneration = $@"You are an AI assistant for MealGenius, an app designed for personalized nutrition and meal planning.
+                var groceryList_JsonExamplePath = "JsonFiles/Grocery_List_Example.json";
+                string groceryList_JsonExample = File.ReadAllText(groceryList_JsonExamplePath);
+
+                var UserInputsJson = userInput.UserData;
+                //GroceryList Generation
+                string systemPromptGroceryListGeneration = $@"You are an AI assistant for MealGenius, an app designed for personalized nutrition and meal planning.
 
 
-                                It focuses on setting nutritional goals and providing tailored meal plans based on user data.
-                                The app caters to a diverse audience, including individuals with ADHD, and emphasizes informative educative content while being friendly, fun.
+                            It focuses on setting nutritional goals and providing tailored meal plans based on user data.
+                            The app caters to a diverse audience, including individuals with ADHD, and emphasizes informative educative content while being friendly, fun.
 
-                                MealGenius is used globally, so please use simple, clear English, avoiding slang or region-specific terms.
-                                You can use emojis to add engagement and fun, but only where appropriate – do not overuse them.
+                            MealGenius is used globally, so please use simple, clear English, avoiding slang or region-specific terms.
+                            You can use emojis to add engagement and fun, but only where appropriate – do not overuse them.
 
-                                User information relevant informations is provided in the following JSON format.
-                                {UserInputsJson}
-                ";
-                    string userPromptGroceryListGeneration = $@"
+                            User information relevant informations is provided in the following JSON format.
+                            {UserInputsJson}
+            ";
+                string userPromptGroceryListGeneration = $@"
 Generate a JSON file that contains a comprehensive grocery list for a user,
 based on the following list of ingredients required to prepare their meals.
 The JSON should include an array of unique grocery items, ensuring that if an ingredient is mentioned more than once,
@@ -93,56 +96,56 @@ This approach ensures the grocery list is practical for shopping, focusing on th
 The JSON structure should follow this Jsonformat:{groceryList_JsonExample}
 [list of ingredients : this list contains the list of ingredients that the user needs to prepare all their meals :
 {myMealPlan!.DisplayAllIngredients()} ]";
-                    var GroceryList_Json = await _openAIService.GenerateJsonBasedOnPromptResponseAsync(systemPromptGroceryListGeneration, userPromptGroceryListGeneration, maxTokens: 4000, model: "gpt-4-1106-preview", temperature: 0);
+                var GroceryList_Json = await _openAIService.GenerateJsonBasedOnPromptResponseAsync(systemPromptGroceryListGeneration, userPromptGroceryListGeneration, maxTokens: 4000, model: "gpt-4-1106-preview", temperature: 0);
 
-                    var groceryList = JsonConvert.DeserializeObject<GroceryList>(GroceryList_Json);
+                var groceryList = JsonConvert.DeserializeObject<GroceryList>(GroceryList_Json);
 
 
 
-                    // Loop over each category and convert the list of grocery items to a string
-                    var groceryCategoriesDetailed = new GroceryCategoriesDetailed();
+                // Loop over each category and convert the list of grocery items to a string
+                var groceryCategoriesDetailed = new GroceryCategoriesDetailed();
 
-                    var tasks = new List<Task>();
+                var tasks = new List<Task>();
 
-                    foreach (var category in groceryList.Categories)
+                foreach (var category in groceryList.Categories)
+                {
+                    //string formattedGroceryItems = $"Category Name:{category.Key} \n Grocery Items: {string.Join(", ", category.Value)}";
+                    GroceryCategory groceryCategory = new GroceryCategory
                     {
-                        //string formattedGroceryItems = $"Category Name:{category.Key} \n Grocery Items: {string.Join(", ", category.Value)}";
-                        GroceryCategory groceryCategory = new GroceryCategory
+                        CategoryName = category.Key,
+                        GroceryItems = new List<GroceryItem>()
+                    };
+
+                    foreach (var item in category.Value)
+                    {
+                        GroceryItem groceryItem = new GroceryItem
                         {
-                            CategoryName = category.Key,
-                            GroceryItems = new List<GroceryItem>()
+                            GroceryItemName = item
                         };
 
-                        foreach (var item in category.Value)
-                        {
-                            GroceryItem groceryItem = new GroceryItem
-                            {
-                                GroceryItemName = item
-                            };
-
-                            groceryCategory.GroceryItems.Add(groceryItem);
-                        }
-
-                        groceryCategoriesDetailed.GroceryCategories.Add(groceryCategory);
-
+                        groceryCategory.GroceryItems.Add(groceryItem);
                     }
 
+                    groceryCategoriesDetailed.GroceryCategories.Add(groceryCategory);
 
-
-                    foreach (var category in groceryCategoriesDetailed.GroceryCategories)
-                    {
-                        tasks.Add(GenerateGroceryInfos(category, UserInputsJson));
-                    }
-
-                    await Task.WhenAll(tasks);
-
-
-
-                    existingMealPlan.GroceryListJson = JsonConvert.SerializeObject(groceryCategoriesDetailed);
-
-                    _dbContext.SaveChanges();
-                    _logger.LogInformation($"Grocerylist generated for UserId: {userTaskDTO.UserId}");
                 }
+
+
+
+                foreach (var category in groceryCategoriesDetailed.GroceryCategories)
+                {
+                    tasks.Add(GenerateGroceryInfos(category, UserInputsJson));
+                }
+
+                await Task.WhenAll(tasks);
+
+
+
+                existingMealPlan.GroceryListJson = JsonConvert.SerializeObject(groceryCategoriesDetailed);
+
+                _dbContext.SaveChanges();
+                _logger.LogInformation($"Grocerylist generated for UserId: {userTaskDTO.UserId}");
+                
 
 
                 
@@ -167,7 +170,7 @@ The JSON structure should follow this Jsonformat:{groceryList_JsonExample}
                         //verifier si il existe dans groceryItem.SimilarNames
                         if (existingGroceryItem != null && !existingGroceryItem.ImageUrl.IsNullOrEmpty())
                         {
-                            groceryItem.GroceryItem_ImageUrl = existingGroceryItem.ImageUrl;
+                            groceryItem.GroceryItem_ImageUrl = existingGroceryItem.CompressedImageUrl;
                             imageFound = true;
                             existingGroceryItem.SimilarNames = groceryItemSimilarNamesToLower;
                             // Ensure existingSimilarNames is not null and is a List<string>
@@ -197,7 +200,7 @@ The JSON structure should follow this Jsonformat:{groceryList_JsonExample}
                                 if (matchFoundInSimilarNames)
                                 {
 
-                                    groceryItem.GroceryItem_ImageUrl = groceryItemDb.ImageUrl;
+                                    groceryItem.GroceryItem_ImageUrl = groceryItemDb.CompressedImageUrl;
                                     imageFound = true;
                                     var existingSimilarNames = groceryItemDb.SimilarNames ?? new List<string>();
                                     //var matchFoundInExistingSimilarNames = groceryItem.SimilarNames.Any(similarName => similarName.ToLower() == name.ToLower());
@@ -230,7 +233,7 @@ The JSON structure should follow this Jsonformat:{groceryList_JsonExample}
                         
                         if (existingSimilarGroceryItem != null)
                         {
-                            groceryItem.GroceryItem_ImageUrl = existingSimilarGroceryItem.ImageUrl;
+                            groceryItem.GroceryItem_ImageUrl = existingSimilarGroceryItem.CompressedImageUrl;
                             imageFound = true;
 
                             existingSimilarGroceryItem.SimilarNames = groceryItemSimilarNamesToLower;
@@ -254,14 +257,14 @@ The JSON structure should follow this Jsonformat:{groceryList_JsonExample}
 
                             if (existingSimilarItem != null && !existingSimilarItem.ImageUrl.IsNullOrEmpty())
                             {
-                                groceryItem.GroceryItem_ImageUrl = existingSimilarItem.ImageUrl;
+                                groceryItem.GroceryItem_ImageUrl = existingSimilarItem.CompressedImageUrl;
                                 imageFound = true;
                                 break;
                             }
                             var existingSimilarGroceryItemInSimilarNames = _dbContext.GroceryItems.FirstOrDefault(g => g.SimilarNames.Contains(similarName));
                             if (existingSimilarGroceryItemInSimilarNames != null && !existingSimilarItem.ImageUrl.IsNullOrEmpty())
                             {
-                                groceryItem.GroceryItem_ImageUrl = existingSimilarGroceryItemInSimilarNames.ImageUrl;
+                                groceryItem.GroceryItem_ImageUrl = existingSimilarGroceryItemInSimilarNames.CompressedImageUrl;
                                 imageFound = true;
                                 break;
                             }
