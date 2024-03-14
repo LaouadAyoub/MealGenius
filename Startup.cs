@@ -36,9 +36,14 @@ public class Startup
             // CORS Policy Configuration
             services.AddCors(options =>
             {
-                options.AddPolicy("AllowAll", builder =>
+                options.AddPolicy("AllowSpecificOrigin", builder =>
                 {
-                    builder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
+                    var frontendUrl = Configuration["FRONTEND_URL"] ?? "http://localhost:3000";
+
+                    builder.WithOrigins(frontendUrl)
+                           .AllowAnyMethod()
+                           .AllowAnyHeader()
+                           .AllowCredentials();
                 });
             });
 
