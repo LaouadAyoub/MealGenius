@@ -38,7 +38,7 @@ public class Startup
             {
                 options.AddPolicy("AllowSpecificOrigin", builder =>
                 {
-                    var frontendUrl = Configuration["FRONTEND_URL"] ?? "http://localhost:3000";
+                    var frontendUrl = Environment.GetEnvironmentVariable("FRONTEND_URL") ?? "http://localhost:3000";
 
                     builder.WithOrigins(frontendUrl)
                            .AllowAnyMethod()
@@ -108,7 +108,7 @@ public class Startup
             // Middleware Configuration
             app.UseDefaultFiles();
             app.UseStaticFiles();
-            app.UseCors("AllowAll");
+            app.UseCors("AllowSpecificOrigin");
             app.UseRouting();
             app.UseAuthentication();
             app.UseAuthorization();
