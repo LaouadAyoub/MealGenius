@@ -108,8 +108,8 @@ public class Startup
             // Middleware Configuration
             app.UseDefaultFiles();
             app.UseStaticFiles();
-            app.UseCors("AllowSpecificOrigin");
             app.UseRouting();
+            app.UseCors("AllowSpecificOrigin");
             app.UseAuthentication();
             app.UseAuthorization();
 
