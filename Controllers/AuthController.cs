@@ -53,7 +53,7 @@ namespace MealGeniusBackend.Controllers
             {
                 HttpOnly = true,
                 Secure = true, // Set to true if using HTTPS. If you're in development (likely using HTTP), this can be set based on the request or environment.
-                SameSite = SameSiteMode.Strict, // Helps mitigate CSRF. Consider Lax if you need cross-site requests.
+                SameSite = SameSiteMode.None, // Helps mitigate CSRF. Consider Lax if you need cross-site requests.
                 Expires = DateTime.UtcNow.AddDays(1), // Align with your token's expiration
             };
 
