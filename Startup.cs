@@ -44,6 +44,7 @@ public class Startup
                            .AllowAnyMethod()
                            .AllowAnyHeader()
                            .AllowCredentials();
+
                 });
             });
 
