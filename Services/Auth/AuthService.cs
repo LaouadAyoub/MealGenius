@@ -8,7 +8,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace MealGeniusBackend.Services
+namespace MealGeniusBackend.Services.Auth
 {
     // AuthService.cs (in your Services folder)
     public class AuthService : IAuthService

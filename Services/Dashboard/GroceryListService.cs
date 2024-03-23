@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 // OpenAI_API.Models.Model.GPT4
 
 
-namespace MealGeniusBackend.Services
+namespace MealGeniusBackend.Services.Dashboard
 {
     public interface IGroceryListService
     {
@@ -116,14 +116,23 @@ The JSON structure should follow this Jsonformat:{groceryList_JsonExample}
                         GroceryItems = new List<GroceryItem>()
                     };
 
-                    foreach (var item in category.Value)
-                    {
-                        GroceryItem groceryItem = new GroceryItem
-                        {
-                            GroceryItemName = item
-                        };
+                    // A HashSet to track unique grocery item names for this category
+                    HashSet<string> uniqueItemNames = new HashSet<string>();
 
-                        groceryCategory.GroceryItems.Add(groceryItem);
+                    foreach (var itemName in category.Value)
+                    {
+                        // Check if the item name is already added
+                        if (!uniqueItemNames.Contains(itemName))
+                        {
+                            GroceryItem groceryItem = new GroceryItem
+                            {
+                                GroceryItemName = itemName
+                            };
+
+                            // Add the unique grocery item to the category and the name to the tracking HashSet
+                            groceryCategory.GroceryItems.Add(groceryItem);
+                            uniqueItemNames.Add(itemName);
+                        }
                     }
 
                     groceryCategoriesDetailed.GroceryCategories.Add(groceryCategory);
@@ -145,18 +154,15 @@ The JSON structure should follow this Jsonformat:{groceryList_JsonExample}
 
                 _dbContext.SaveChanges();
                 _logger.LogInformation($"Grocerylist generated for UserId: {userTaskDTO.UserId}");
-                
 
-
-                
-
+                // Generate images for grocery items
                 var existing_groceryList = JsonConvert.DeserializeObject<GroceryCategoriesDetailed>(existingMealPlan.GroceryListJson);
 
                 foreach (var groceryCategory in existing_groceryList.GroceryCategories)
                 {
                     foreach (var groceryItem in groceryCategory.GroceryItems)
                     {
-                        if(!groceryItem.GroceryItem_ImageUrl.IsNullOrEmpty())
+                        if (!groceryItem.GroceryItem_ImageUrl.IsNullOrEmpty())
                             continue;
 
                         // verifier si l'image du groceryItem existe dans la table GroceryItemImages
@@ -221,7 +227,7 @@ The JSON structure should follow this Jsonformat:{groceryList_JsonExample}
                                 }
                             }
                         }
-                        if(imageFound)
+                        if (imageFound)
                         {
                             existingMealPlan.GroceryListJson = JsonConvert.SerializeObject(existing_groceryList);
 
@@ -230,7 +236,7 @@ The JSON structure should follow this Jsonformat:{groceryList_JsonExample}
                         }
 
                         var existingSimilarGroceryItem = _dbContext.GroceryItems.FirstOrDefault(g => g.SimilarNames.Contains(groceryItem.GroceryItemName));
-                        
+
                         if (existingSimilarGroceryItem != null)
                         {
                             groceryItem.GroceryItem_ImageUrl = existingSimilarGroceryItem.CompressedImageUrl;
@@ -299,7 +305,7 @@ The JSON structure should follow this Jsonformat:{groceryList_JsonExample}
                 _dbContext.SaveChanges();
 
                 return;
-                
+
 
             }
             catch (Exception ex)

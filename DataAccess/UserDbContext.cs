@@ -21,10 +21,16 @@ namespace MealGeniusBackend.DataAcess
         public DbSet<GroceryItem> GroceryItems { get; set; }  // Ajout du nouveau DbSet
         //ADD NotFoundGroceryItems as a new table a new DbSet
         public DbSet<NotFoundGroceryItems> NotFoundGroceryItems { get; set; }
+        public DbSet<ConfirmationToken> ConfirmationTokens { get; set; }
+
+
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+
+
+
 
             // UserTask to UserDashboard one-to-one relationship
             builder.Entity<UserTask>()
@@ -82,6 +88,15 @@ namespace MealGeniusBackend.DataAcess
             });
         }
     }
+
+    public class ConfirmationToken
+    {
+        public int Id { get; set; }
+        public string UserId { get; set; }
+        public string Token { get; set; }
+        public DateTime IssuedAt { get; set; }
+    }
+
 
 
     public class UserDashboard

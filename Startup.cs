@@ -13,6 +13,11 @@ using Microsoft.OpenApi.Models;
 using System.Reflection;
 using MealGeniusBackend.DataAcess;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using MealGeniusBackend.Services.Dashboard;
+using MealGeniusBackend.Services.Auth;
+using MealGeniusBackend.Services.RabbitMQ;
 
 public class Startup
 {
@@ -38,7 +43,7 @@ public class Startup
             {
                 options.AddPolicy("AllowSpecificOrigin", builder =>
                 {
-                    var frontendUrl = Environment.GetEnvironmentVariable("FRONTEND_URL") ?? "http://localhost:3000";
+                    var frontendUrl = Environment.GetEnvironmentVariable("FRONTEND_URL") ?? "http://localhost:3012";
 
                     builder.WithOrigins(frontendUrl)
                            .AllowAnyMethod()
@@ -153,42 +158,56 @@ public class Startup
 
     private void ConfigureAuthentication(IServiceCollection services)
     {
-        services.AddIdentity<IdentityUser, IdentityRole>()
-                .AddEntityFrameworkStores<UserDbContext>()
-                .AddDefaultTokenProviders();
+        services.AddIdentity<IdentityUser, IdentityRole>(options =>
+        {
+            options.SignIn.RequireConfirmedAccount = false; // Changed to false to accept non-confirmed accounts
+        })  
+        .AddEntityFrameworkStores<UserDbContext>()
+        .AddDefaultTokenProviders();
+
 
         services.AddAuthentication(options =>
         {
             options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
             options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-        })
-            .AddJwtBearer(options =>
-            {
-                options.TokenValidationParameters = new TokenValidationParameters
-                {
-                    ValidateIssuer = true,
-                    ValidIssuer = Configuration["JwtConfig:Issuer"],
-                    ValidateAudience = true,
-                    ValidAudience = Configuration["JwtConfig:Audience"],
-                    ValidateLifetime = true,
-                    ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Configuration["JwtConfig:Key"]))
-                };
+            //options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+            //options.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
 
-                // Retrieve token from cookies
-                options.Events = new JwtBearerEvents
+        })
+        .AddJwtBearer(options =>
+        {
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidIssuer = Configuration["JwtConfig:Issuer"],
+                ValidateAudience = true,
+                ValidAudience = Configuration["JwtConfig:Audience"],
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Configuration["JwtConfig:Key"]))
+            };
+
+            // Retrieve token from cookies
+            options.Events = new JwtBearerEvents
+            {
+                OnMessageReceived = context =>
                 {
-                    OnMessageReceived = context =>
+                    var accessToken = context.Request.Cookies["AuthToken"];
+                    if (!string.IsNullOrEmpty(accessToken))
                     {
-                        var accessToken = context.Request.Cookies["AuthToken"];
-                        if (!string.IsNullOrEmpty(accessToken))
-                        {
-                            context.Token = accessToken;
-                        }
-                        return Task.CompletedTask;
+                        context.Token = accessToken;
                     }
-                };
-            });
+                    return Task.CompletedTask;
+                }
+            };
+        })
+        .AddGoogle(googleOptions =>
+        {
+            // Your Google authentication configuration
+            googleOptions.ClientId = "974872884196-ivamtgv2el9ei0jqtqb5ipul9gn66mqt.apps.googleusercontent.com";
+            googleOptions.ClientSecret = "REDACTED";
+            googleOptions.CallbackPath = new PathString("/api/Auth/signin-google");
+        });
     }
 
     private void ConfigureSwagger(IServiceCollection services)

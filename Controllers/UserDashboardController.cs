@@ -9,7 +9,7 @@ using Newtonsoft.Json;
 namespace MealGeniusBackend.Controllers
 {
     [Authorize]
-    [Route("[controller]")]
+    [Route("api/[controller]")]
     [ApiController]
     public class UserDashboardController : Controller
     {

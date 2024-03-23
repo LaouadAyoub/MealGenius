@@ -7,7 +7,7 @@ using static MealGeniusBackend.Controllers.MainAPIController;
 using Newtonsoft.Json.Linq;
 using MealGeniusBackend.Models;
 
-namespace MealGeniusBackend.Services
+namespace MealGeniusBackend.Services.Dashboard
 {
     public interface IUserDashboardService
     {
@@ -51,9 +51,10 @@ namespace MealGeniusBackend.Services
                 {
                     return;
                 }
-
+                var timer = new ServiceTaskTimer("UserDashboardService", "Start the generation of the dashboard");
+                timer.Start();
                 var dashboardInfos = await GetDashboardInfo(userInput.UserData);
-
+                timer.StopAndLog();
                 UserDashboard newDashboard = new UserDashboard
                 {
                     Id = Guid.NewGuid(),
@@ -88,6 +89,7 @@ namespace MealGeniusBackend.Services
             {
                 // ChatMacroTargets section
 
+                //CaloricNeedsCalculator.CalculateBMR(age, weight, height);
 
                 string systemPrompt = $@"You are an AI assistant for MealGenius, an app designed for personalized nutrition and meal planning.
  
@@ -268,9 +270,9 @@ Note to AI: The final guide should be neatly organized, with line breaks and bul
                 //var waterIntakeTask =  _openAIService.GetResponseAsync(systemPrompt, userWaterIntakePrompt, OpenAI_API.Models.Model.GPT4, 6500);
                 //var userGoalsTask =  _openAIService.GetResponseAsync(systemPrompt, UserGoalsGuideUserPrompt, OpenAI_API.Models.Model.GPT4, 5500);
 
-                var macroTargetsTask = _openAIService.GetResponseAsync(systemPrompt, userMacroTargetsprompt, OpenAI_API.Models.Model.ChatGPTTurbo, 4096);
-                var microGuideTask = _openAIService.GetResponseAsync(systemPrompt, userMicroGuidePrompt, OpenAI_API.Models.Model.ChatGPTTurbo, 4096);
-                var waterIntakeTask = _openAIService.GetResponseAsync(systemPrompt, userWaterIntakePrompt, OpenAI_API.Models.Model.ChatGPTTurbo, 4096);
+                var macroTargetsTask = _openAIService.GetResponseAsync(systemPrompt, userMacroTargetsprompt, OpenAI_API.Models.Model.GPT4, 5800);
+                var microGuideTask = _openAIService.GetResponseAsync(systemPrompt, userMicroGuidePrompt, OpenAI_API.Models.Model.GPT4, 6000);
+                var waterIntakeTask = _openAIService.GetResponseAsync(systemPrompt, userWaterIntakePrompt, OpenAI_API.Models.Model.GPT4, 5800);
                 var userGoalsTask = _openAIService.GetResponseAsync(systemPrompt, UserGoalsGuideUserPrompt, OpenAI_API.Models.Model.ChatGPTTurbo, 4096);
 
                 await Task.WhenAll(macroTargetsTask, microGuideTask, waterIntakeTask, userGoalsTask);
@@ -312,19 +314,19 @@ please find the example json below:
                     .Replace("{WaterIntakeResponse}", waterIntakeResponse)
                     .Replace("{userDashboard_JsonExample}", userDashboard_JsonExample);
 
-//                string userPromptJson = @$"
-//    Based on this {{Markdown text}} detailing the user's Basal Metabolic Rate (BMR), daily caloric needs, water intake, and essential micronutrients, 
-//    generate a JSON structure that encapsulates this data. 
-//    The JSON should include the BMR, total caloric need, macronutrient ratio (protein, fats, and carbohydrates) in both grams and percentages, 
-//    recommended water intake, and a list of essential micronutrients. 
-//    Use this example JSON structure as a guide, ensuring that the key values are consistent, 
-//    with only the actual values changing based on the user's data.
+                //                string userPromptJson = @$"
+                //    Based on this {{Markdown text}} detailing the user's Basal Metabolic Rate (BMR), daily caloric needs, water intake, and essential micronutrients, 
+                //    generate a JSON structure that encapsulates this data. 
+                //    The JSON should include the BMR, total caloric need, macronutrient ratio (protein, fats, and carbohydrates) in both grams and percentages, 
+                //    recommended water intake, and a list of essential micronutrients. 
+                //    Use this example JSON structure as a guide, ensuring that the key values are consistent, 
+                //    with only the actual values changing based on the user's data.
 
-//the Json should follow exactly the structure of the example below, with only the actual values changing based on the user's data. the json will be deserialised into a C# object, so make sure the keys are valid C# property names.
-//please find the example json below:
-//{userDashboard_JsonExample}
-//    {{Markdown text : {macroTargetsResponse} + {microGuideResponse} + {waterIntakeResponse}}}
-//";
+                //the Json should follow exactly the structure of the example below, with only the actual values changing based on the user's data. the json will be deserialised into a C# object, so make sure the keys are valid C# property names.
+                //please find the example json below:
+                //{userDashboard_JsonExample}
+                //    {{Markdown text : {macroTargetsResponse} + {microGuideResponse} + {waterIntakeResponse}}}
+                //";
 
                 var JsonUserKeyInfos = await _openAIService.GenerateJsonBasedOnPromptResponseAsync(systemPromptJson, userPromptJson, 600);
 

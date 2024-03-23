@@ -1,0 +1,83 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Confirmation</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #fff3f4;
+            margin: 0;
+            padding: 0;
+            color: #333;
+        }
+
+        .email-container {
+            max-width: 600px;
+            background: #ffffff;
+            margin: 20px auto;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .header {
+            text-align: center;
+            padding-bottom: 20px;
+        }
+
+            .header img {
+                height: 50px;
+            }
+
+        .content {
+            text-align: center;
+            padding: 20px;
+            line-height: 1.5;
+        }
+
+            .content h1 {
+                color: #333333;
+                font-size: 24px;
+                margin-top: 0;
+            }
+
+        .confirm-button {
+            background-color: #FFD580;
+            color: #333333;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 20px;
+            font-weight: bold;
+            display: inline-block;
+            margin-top: 20px;
+        }
+
+        .footer {
+            font-size: 12px;
+            text-align: center;
+            color: #999999;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <img src="cid:logo-image-cid" alt="Meal Genius Logo">
+            <h1>Meal Genius</h1>
+        </div>
+
+        <div class="content">
+            <h1>Hello {Username},</h1>
+            <p>Thank you for choosing MealGenius! Please confirm your email to setup your password and step into your custom kitchen and start the journey towards personalized nutrition.</p>
+            <a href="https://yourdomain.com/confirm?token={ConfirmationToken}" class="confirm-button">Confirm Your Email</a>
+            <p>Your dashboard of delights—nutritional guides, groceries, and delicious meals—is ready and waiting.</p>
+        </div>
+
+        <div class="footer">
+            Meal Genius, by Adhdoers Inc.<br>
+        </div>
+    </div>
+</body>
+</html>

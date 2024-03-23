@@ -1,5 +1,6 @@
 ﻿using FluentEmail.Core;
 using MealGeniusBackend.DataAcess;
+using MealGeniusBackend.Helpers;
 using MealGeniusBackend.Models;
 using Newtonsoft.Json;
 using OpenAI_API;
@@ -8,7 +9,7 @@ using System.Text;
 // OpenAI_API.Models.Model.GPT4
 
 
-namespace MealGeniusBackend.Services
+namespace MealGeniusBackend.Services.Dashboard
 {
     public interface IMealPlanService
     {
@@ -56,18 +57,35 @@ namespace MealGeniusBackend.Services
 
                 var existingMealPlan = _dbContext.MealPlans.SingleOrDefault(mealPlan => mealPlan.TaskId == userTaskDTO.Id);
 
+                //if (existingMealPlan is not null)
+                //{
+                //    _logger.LogInformation("MealPlan already exists");
+                //    return;
+                //}
+
                 if (existingMealPlan is not null)
                 {
                     _logger.LogInformation("MealPlan already exists");
+                    UserMealsRoot? theUserMealsRoot1 = JsonConvert.DeserializeObject<UserMealsRoot>(existingMealPlan.MealPlanJson);
+
+                    theUserMealsRoot1.UserMeals.ForEach(async meal =>
+                    {
+                        meal.mealRecipeBreakdown = null;
+                        meal.mealRecipeBreakdown = MagicParserService.ParseRecipe(meal.Recipe);
+                    });
+
+                    existingMealPlan.MealPlanJson = JsonConvert.SerializeObject(theUserMealsRoot1);
+                    _dbContext.SaveChanges();
                     return;
                 }
-
                 // Generate First Json that contains the meals PreData
+                var timer = new ServiceTaskTimer("MealPlanService", "The generation of : Create 12 personalized meal ideas");
+                timer.Start();
                 var MealRecipeBreakdow_JsonExamplePath = "JsonFiles/Meal_PreData_Generation.json";
                 string MealRecipeBreakdow_JsonExample = System.IO.File.ReadAllText(MealRecipeBreakdow_JsonExamplePath);
 
                 if (MealRecipeBreakdow_JsonExample is not null)
-                { 
+                {
                     _logger.LogInformation($"MealRecipeBreakdow_JsonExample found \n {MealRecipeBreakdow_JsonExample}");
                 }
 
@@ -104,24 +122,28 @@ Plz follow the format of the JSON file provided in the following line :
 
 {MealRecipeBreakdow_JsonExample}";
                 var userMealsJson = await _openAIService.GenerateJsonBasedOnPromptResponseAsync(systemPromptJsonMealsGeneration, userPromptJsonMealsGeneration, 1000, model: "gpt-4-1106-preview", temperature: 0.8);
+                timer.Start();
+
 
                 UserMealsRoot? theUserMealsRoot = JsonConvert.DeserializeObject<UserMealsRoot>(userMealsJson);
 
-                if(theUserMealsRoot is null)
+                if (theUserMealsRoot is null)
                 {
                     _logger.LogError("UserMealsRoot is null");
                     return;
                 }
                 //Meal Recipe and PostData Generation
                 var tasks = new List<Task>();
+                var timer1 = new ServiceTaskTimer("MealPlanService", "The generation of 12 meal recipes");
+                timer1.Start();
                 foreach (var meal in theUserMealsRoot.UserMeals)
                 {
                     tasks.Add(FillUserMealsData(meal, UserInputsJson));
                 }
                 await Task.WhenAll(tasks);
+                timer1.StopAndLog();
 
-
-                string mealPlanJson = Newtonsoft.Json.JsonConvert.SerializeObject(theUserMealsRoot);
+                string mealPlanJson = JsonConvert.SerializeObject(theUserMealsRoot);
 
 
 
@@ -249,9 +271,9 @@ write the content of each section without rewriting the title of the section plz
                 double caloriesFromFats = fatsGrams * caloriesPerGramFats;
 
                 // Calculate the percentage of total calories for each macronutrient
-                double carbsPercentage = (caloriesFromCarbs / totalCalories) * 100;
-                double proteinPercentage = (caloriesFromProtein / totalCalories) * 100;
-                double fatsPercentage = (caloriesFromFats / totalCalories) * 100;
+                double carbsPercentage = caloriesFromCarbs / totalCalories * 100;
+                double proteinPercentage = caloriesFromProtein / totalCalories * 100;
+                double fatsPercentage = caloriesFromFats / totalCalories * 100;
 
                 // Format and return the percentages as strings with two decimal places
                 return ($"{carbsPercentage:F2}", $"{proteinPercentage:F2}", $"{fatsPercentage:F2}");
@@ -350,175 +372,6 @@ Start directly by the markdown header  : # The Title of the Recipe
             int randomIndex = random.Next(mealBackgroundcolors.Count);
             return mealBackgroundcolors[randomIndex];
         }
-        #region old unused code
-        static async Task<string> DownloadAndSaveImage(string imageUrl, string imageName)
-        {
-            string directoryPath = @"C:\persoProjects\MealPlanner\MealgeniusFull\MealGenius_ui\mealsImages\newUserImages";
-
-            string sanitizedImageName = SanitizeFileName(imageName);
-            string localFilePath = Path.Combine(directoryPath, sanitizedImageName + ".png");
-
-            if (!Directory.Exists(directoryPath))
-            {
-                Directory.CreateDirectory(directoryPath);
-            }
-
-            using (HttpClient client = new HttpClient())
-            {
-                HttpResponseMessage response = await client.GetAsync(imageUrl);
-                if (response.IsSuccessStatusCode)
-                {
-                    byte[] imageBytes = await response.Content.ReadAsByteArrayAsync();
-                    await System.IO.File.WriteAllBytesAsync(localFilePath, imageBytes);
-                    return localFilePath; // Return the local file path
-                }
-            }
-
-            return null; // Return null if download fails
-        }
-        // Method to sanitize file names
-        static string SanitizeFileName(string fileName)
-        {
-            foreach (char c in Path.GetInvalidFileNameChars())
-            {
-                fileName = fileName.Replace(c, '_'); // Replace invalid chars with underscore
-            }
-            return fileName;
-        }
-        #endregion
     }
 
-    #region Models
-    public class MealTotalBreakdown
-    {
-        public MealData MealDetails;
-        public MealRecipeBreakdown MealInformation;
-    }
-
-
-    public class MealData
-    {
-        public string MealName { get; set; }
-        public Macronutrients Macronutrients { get; set; }
-        public List<string> Micronutrients { get; set; }
-        public string ServingSize { get; set; }
-        public List<string> Ingredients { get; set; }
-    }
-
-    public class MealRecipeBreakdown
-    {
-        public string NameOfTheMeal { get; set; }
-        public string Introduction { get; set; }
-        public string Ingredients { get; set; }
-        public string ServingText { get; set; }
-        public string DetailedCookingInstructions { get; set; }
-        public string AppliancesAndTools { get; set; }
-        public string MealTimingRecommendations { get; set; }
-        public string Macronutrients_Section { get; set; }
-        public string Key_Micronutrients { get; set; }
-        public string Health_Benefits { get; set; }
-        public string Conclusion { get; set; }
-    }
-    public class Macronutrients
-    {
-        public string Proteins { get; set; }
-        public string Carbohydrates { get; set; }
-        public string Fats { get; set; }
-        public string Calories { get; set; }
-
-        public override string ToString()
-        {
-            return $"Proteins: {Proteins}, Carbohydrates: {Carbohydrates}, Fats: {Fats}, Calories: {Calories}";
-        }
-    }
-
-    public class Macronutrients_Pourcentage
-    {
-        public string ProteinPercentage { get; set; }
-        public string CarbsPercentage { get; set; }
-        public string FatsPercentage { get; set; }
-    }
-    public class aMeal
-    {
-        public string MealName { get; set; }
-        public List<string> MealType { get; set; }
-        public string PreparationSkill { get; set; }
-        public List<string> MoodSuitability { get; set; }
-        public List<string> Tags { get; set; }
-
-        public Macronutrients Macronutrients { get; set; }
-        
-        public Macronutrients_Pourcentage Macronutrients_Pourcentage { get; set; }
-        public List<string> Micronutrients { get; set; }
-        public string ServingSize { get; set; }
-        public List<string> Ingredients { get; set; }
-
-
-        public string Recipe { get; set; }  // <-- New property
-
-        public MealRecipeBreakdown mealRecipeBreakdown { get; set; }
-        public string MealImage { get; set; }
-
-        public string MealBackgroundColor { get; set; }
-
-        public override string ToString()
-        {
-            var stringBuilder = new System.Text.StringBuilder();
-
-            stringBuilder.AppendLine($"Meal Name: {MealName}");
-
-            if (MealType != null && MealType.Any())
-                stringBuilder.AppendLine($"Meal Type: {string.Join(", ", MealType)}");
-
-            if (PreparationSkill != null && PreparationSkill.Any())
-                stringBuilder.AppendLine($"Preparation Skill: {string.Join(", ", PreparationSkill)}");
-
-            if (MoodSuitability != null && MoodSuitability.Any())
-                stringBuilder.AppendLine($"Mood Suitability: {string.Join(", ", MoodSuitability)}");
-
-            if (Macronutrients != null)
-                stringBuilder.AppendLine($"Macronutrients: {Macronutrients}");
-
-            if (Micronutrients != null && Micronutrients.Any())
-                stringBuilder.AppendLine($"Micronutrients: {string.Join(", ", Micronutrients)}");
-
-            if (!string.IsNullOrWhiteSpace(ServingSize))
-                stringBuilder.AppendLine($"Serving Size: {ServingSize}");
-
-            if (Ingredients != null && Ingredients.Any())
-                stringBuilder.AppendLine($"Ingredients: {string.Join(", ", Ingredients)}");
-
-            return stringBuilder.ToString();
-        }
-    }
-
-    public class UserMealsRoot
-    {
-        public List<aMeal> UserMeals { get; set; }
-        public List<string> GetAllIngredients()
-        {
-            List<string> allIngredients = new List<string>();
-
-            foreach (aMeal meal in UserMeals)
-            {
-                allIngredients.AddRange(meal.Ingredients);
-            }
-
-            return allIngredients;
-        }
-
-        public string DisplayAllIngredients()
-        {
-            List<string> allIngredients = GetAllIngredients();
-            var stringBuilder = new StringBuilder();
-
-            foreach (string ingredient in allIngredients)
-            {
-                stringBuilder.AppendLine($"- {ingredient}");
-            }
-
-            return stringBuilder.ToString();
-        }
-    }
-    #endregion
 }

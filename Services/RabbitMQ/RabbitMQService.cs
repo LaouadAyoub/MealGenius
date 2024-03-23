@@ -5,15 +5,16 @@ using System;
 using System.Text;
 using System.Threading.Tasks;
 using MealGeniusBackend.Models;
+using MealGeniusBackend.Services.Dashboard;
 
-namespace MealGeniusBackend.Services
+namespace MealGeniusBackend.Services.RabbitMQ
 {
 
     public class RabbitMQService : IDisposable
     {
         private readonly IConnection _connection;
         private readonly IModel _channel;
-        private readonly ILogger<RabbitMQService> _logger; 
+        private readonly ILogger<RabbitMQService> _logger;
         private readonly IServiceScopeFactory _serviceScopeFactory;
 
         public RabbitMQService(IServiceScopeFactory serviceScopeFactory, ILogger<RabbitMQService> logger)
@@ -50,7 +51,7 @@ namespace MealGeniusBackend.Services
             try
             {
                 var body = Encoding.UTF8.GetBytes(message);
-                
+
                 _channel.BasicPublish(exchange: "", routingKey: "REDACTED", basicProperties: null, body: body);
                 _logger.LogInformation($"Message published to task_queue: {message}");
             }
@@ -80,6 +81,10 @@ namespace MealGeniusBackend.Services
                         var userDashboardService = scope.ServiceProvider.GetRequiredService<IUserDashboardService>();
                         var groceryListService = scope.ServiceProvider.GetRequiredService<IGroceryListService>();
                         var mealsImagesService = scope.ServiceProvider.GetRequiredService<IMealsImagesService>();
+
+                        // Generate the dashboard
+                        var timer = new ServiceTaskTimer("RabbitMQService", "Start the generation");
+                        timer.Start();
                         await userDashboardService.GenerateUserDashboard(userTaskDTO);
                         await mealPlanService.GenerateMealPlan(userTaskDTO);
 
@@ -87,7 +92,7 @@ namespace MealGeniusBackend.Services
                             groceryListService.GenerateGroceryList(userTaskDTO),
                             mealsImagesService.GenerateMealsImages(userTaskDTO)
                         );
-
+                        timer.StopAndLog();
 
                         _logger.LogInformation($"Processed message successfully: {message}");
                     }

@@ -9,7 +9,7 @@ using System.Text;
 // OpenAI_API.Models.Model.GPT4
 
 
-namespace MealGeniusBackend.Services
+namespace MealGeniusBackend.Services.Dashboard
 {
     public interface IMealsImagesService
     {
@@ -119,7 +119,7 @@ namespace MealGeniusBackend.Services
                 var chatImageNarrativeGenerationResponse = await _openAIService.GetResponseAsync(systemPromptImageGeneration, userImageNarrativeGeneration, OpenAI_API.Models.Model.ChatGPTTurbo, 4000);
 
                 //Meal Recipe and PostData Generation
-                int maxParallelTasks = 6; // Nombre maximal de tâches à exécuter en parallèle
+                int maxParallelTasks = 12; // Nombre maximal de tâches à exécuter en parallèle
                 var userMeals = theUserMealsRoot.UserMeals;
                 for (int i = 0; i < userMeals.Count; i += maxParallelTasks)
                 {
@@ -149,7 +149,7 @@ namespace MealGeniusBackend.Services
                 //}
 
 
-                string mealPlanJson = Newtonsoft.Json.JsonConvert.SerializeObject(theUserMealsRoot);
+                string mealPlanJson = JsonConvert.SerializeObject(theUserMealsRoot);
 
 
 
