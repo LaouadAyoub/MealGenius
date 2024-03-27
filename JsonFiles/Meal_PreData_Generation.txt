@@ -3,7 +3,7 @@
     {
       "MealName": "Globetrotter's Glazed Tofu",
       "MealType": [ "Dinner" ],
-      "PreparationSkill": "Intermediate (This meal requires a moderate level of cooking skill. There are five levels of meal preparation: Beginner, Easy, Intermediate, Advanced, and Expert. Intermediate recipes involve more complex steps and techniques than Easy, but are not as demanding as Advanced or Expert levels.)",
+      "PreparationSkill": "Intermediate", //(This meal requires a moderate level of cooking skill. There are five levels of meal preparation: Beginner, Easy, Intermediate, Advanced, and Expert. Intermediate recipes involve more complex steps and techniques than Easy, but are not as demanding as Advanced or Expert levels
       "MoodSuitability": [ "Adventure Seeker", "Dreamy Indulgence" ]
     },
     {
@@ -22,7 +22,7 @@
       "MealName": "Tranquil Truffle Risotto",
       "MealType": [ "Dinner" ],
       "PreparationSkill": "Advanced",
-      "MoodSuitability": [ "Dreamy Indulgence", "Adventure Seeker" ]
+      "MoodSuitability": [ "Dreamy Indulgence", "Adventure Seeker" ] ## same as the first meal, which is good, so the idea is this, giving the users common tags between meals based on their mood
     },
     {
       "MealName": "Harmony Herbal Tea Blend",

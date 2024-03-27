@@ -2,24 +2,27 @@
   "MealDetails": {
     "MealName": "Classic Spaghetti Carbonara",
     "Macronutrients": {
-      "Calories": "800kcal",
-      "Proteins": "40g",
-      "ProteinPercentage": "20.6%",
-      "Carbohydrates": "75g",
-      "CarbsPercentage": "38.7%",
-      "Fats": "35g",
-      "FatsPercentage": "40.6%"
-
-    },
-    "Macronutrients_Pourcentage": {
-      "ProteinPercentage": "20.6%",
-      "CarbsPercentage": "38.7%",
-      "FatsPercentage": "40.6%"
+    "Calories": "800kcal",
+    "Proteins": "40g",
+    "Carbohydrates": "75g",
+    "Fats": "35g"},
+    "Macronutrients_Pourcentage":
+    {
+        //  calculate ProteinPercentage:
+        // Example: (40g * 4) / 800kcal * 100 = 20.6%
+        "ProteinPercentage": "20.6%",	
+	    //calculate CarbsPercentage:
+        // Example: (75g * 4) / 800kcal * 100 = 38.7%  
+        "CarbsPercentage": "38.7%"
+        // calculate FatsPercentage:
+        // Example: (35g * 9) / 800kcal * 100 = 40.6%
+        "FatsPercentage": "40.6%"
     },
     "Micronutrients": [ "Calcium", "Vitamin B12", "Zinc" ],
     "ServingSize": "500g",
     "Ingredients": [ "Spaghetti", "Egg", "Pancetta", "Pecorino Cheese", "Parmesan Cheese", "Black Pepper", "Salt", "Garlic Powder" ]
   },
+
   "MealInformation": {
     "NameOfTheMeal": "Powerhouse Protein Smoothie Bowl",
     "Introduction": "All the introduction with markdown format",

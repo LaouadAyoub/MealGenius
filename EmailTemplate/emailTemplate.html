@@ -1,0 +1,146 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Background Image Example</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun');
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans&display=swap');
+
+        body, html {
+            height: 100%; /* This ensures the body takes the full height of the HTML document */
+            margin: 0; /* Remove default margin */
+            padding: 0; /* Remove default padding */
+            overflow-x: hidden; /* Prevent horizontal scrolling */
+        }
+
+        body {
+            background-image: url('https://mealgenius1.blob.core.windows.net/meal-genius-illustrations/BetterChoiceLessDistraction.png');
+            background-size: cover; /* Cover the entire page */
+            background-position: center; /* Center the background image */
+            background-repeat: no-repeat; /* Do not repeat the image */
+        }
+
+        .container {
+            width: 75%;
+            height: 75%;
+            background-color: #ffffff;
+            border-radius: 32px; /* Adjust this value to match the Figma design */
+            padding: 40px;
+            margin: 40px auto;
+            border: 4px solid #000000;
+            box-sizing: border-box;
+            box-shadow: 0 7px 0 0 rgba(0, 0, 0, 1); /* Adjust the color and opacity as needed */
+        }
+
+        .email-container {
+            font-family: 'Plus Jakarta Sans', sans-serif; /* Default font for the content */
+            padding: auto;
+            margin: auto;
+            text-align: center;
+        }
+
+            .email-container .header img {
+                /* styles for the logo image */
+            }
+
+            .email-container .header h1,
+            .email-container .content h1 {
+                font-family: 'Sarabun', sans-serif;
+                font-weight: 400; /* Sarabun extra bold */
+            }
+
+            .email-container .content p {
+                font-family: 'Sarabun', sans-serif;
+                font-weight: 400; /* Sarabun extra bold */
+                font-size: 20px;
+            }
+
+
+            .email-container .footer {
+                font-family: 'Plus Jakarta Sans', sans-serif; /* Plus Jakarta Sans for the body content */
+                color: #1D283B;
+                font-size: 12px;
+                font-weight: 400; /* Regular weight */
+                font-style: italic;
+                margin-top: 40px;
+            }
+
+        .confirm-button {
+            display: inline-block;
+            margin-top: 0px;
+            padding: 10px 20px;
+            text-decoration: none;
+            color: #1D283B;
+            background-color: #F6DDD0; /* example button color, adjust as needed */
+            border-color: #1D283B;
+            border: 1px solid #1D283B;
+            border-radius: 5px;
+            font-weight: bold;
+            font-family: 'plus jakarta sans';
+            font-size: 18px;
+            box-shadow: 0 4px 0 0 rgba(0, 0, 0, 1); /* Adjust the color and opacity as needed */
+            border-radius: 70px; /* Adjust this value to match the Figma design */
+        }
+
+        .logo img {
+            width: 12%;
+            height: 15%;
+        }
+
+        /* Ensures that the .container scales responsively */
+        @media (max-width: 768px) {
+            .container {
+                width: 95%; /* Take up 100% of the viewport width */
+                height: 75%; /* Take up 100% of the viewport height */
+                padding: 40px 20px; /* Add some padding to the sides */
+                margin: 40px auto;
+                border-radius: 32px; /* Adjust this value to match the Figma design */
+                box-sizing: border-box; /* Include padding and border in the element's size */
+            }
+
+            .logo img {
+                width: 25%;
+                height: 28%;
+            }
+
+            .email-container .content p {
+                font-family: 'Sarabun', sans-serif;
+                font-weight: 400; /* Sarabun extra bold */
+                font-size: 14px;
+            }
+        }
+
+        /* Dark mode styles */
+        @media (prefers-color-scheme: dark) {
+            .confirm-button {
+                background-color: #FECC56; /* Darker background color for the button */
+                color:  #FFFFFF; /* Light text color for the button */
+            }
+}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="email-container">
+            <div class="header">
+                <div class="logo">
+                    <img src="https://mealgenius1.blob.core.windows.net/meal-genius-illustrations/Illustration.png" alt="Meal Genius Mascot">
+                </div>
+            </div>
+
+            <div class="content">
+                <h1>Hello <strong>{Name}</strong>,</h1>
+                <p>Thank you for choosing MealGenius! Please <strong>confirm your email</strong>  to setup your password and  step into your custom kitchen and <strong>start the journey towards personalized nutrition</strong>.</p>
+                <a href="{confirmationLink}" class="confirm-button">Confirm your Email</a>
+                <p><strong></strong> dashboard of delights <strong>—nutritional guides, groceries, and delicious meals—</strong> is ready and waiting.</p>
+            </div>
+
+            <div class="footer">
+                MealGenius, by Adhdoers Inc.<br>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

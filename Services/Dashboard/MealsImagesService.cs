@@ -9,7 +9,7 @@ using System.Text;
 // OpenAI_API.Models.Model.GPT4
 
 
-namespace MealGeniusBackend.Services
+namespace MealGeniusBackend.Services.Dashboard
 {
     public interface IMealsImagesService
     {
@@ -34,7 +34,6 @@ namespace MealGeniusBackend.Services
         public async Task GenerateMealsImages(UserTaskDTO userTaskDTO)
         {
             var userTask = _dbContext.Tasks.Where(u => u.Id == userTaskDTO.Id).FirstOrDefault();
-            _dbContext.SaveChanges();
 
             try
             {
@@ -52,10 +51,7 @@ namespace MealGeniusBackend.Services
 
                 var existingMealPlan = _dbContext.MealPlans.SingleOrDefault(mealPlan => mealPlan.TaskId == userTaskDTO.Id);
 
-                if (userTask.MealsImagesStatus is UserMealsImagesStatus.Completed)
-                {
-                    return;
-                }
+
                 if (existingMealPlan is null)
                 {
                     _logger.LogError("MealPlan not found");
@@ -73,6 +69,12 @@ namespace MealGeniusBackend.Services
                 var mealWithNoImage = theUserMealsRoot.UserMeals.Where(m => string.IsNullOrEmpty(m.MealImage)).FirstOrDefault();
 
                 if (mealWithNoImage is null)
+                {
+                    return;
+                }
+
+                // TODO had ligne khessni n7eidha
+                if (userTask.MealsImagesStatus is UserMealsImagesStatus.Completed)
                 {
                     return;
                 }
@@ -117,9 +119,10 @@ namespace MealGeniusBackend.Services
                 ";
 
                 var chatImageNarrativeGenerationResponse = await _openAIService.GetResponseAsync(systemPromptImageGeneration, userImageNarrativeGeneration, OpenAI_API.Models.Model.ChatGPTTurbo, 4000);
-
+                var timer = new ServiceTaskTimer("MealsImagesService", "the generation of meal images");
+                timer.Start();
                 //Meal Recipe and PostData Generation
-                int maxParallelTasks = 6; // Nombre maximal de tâches à exécuter en parallèle
+                int maxParallelTasks = 12; // Nombre maximal de tâches à exécuter en parallèle
                 var userMeals = theUserMealsRoot.UserMeals;
                 for (int i = 0; i < userMeals.Count; i += maxParallelTasks)
                 {
@@ -133,6 +136,8 @@ namespace MealGeniusBackend.Services
 
                     await Task.WhenAll(tasks);
                 }
+                timer.StopAndLog();
+                #region Old Code
                 //var tasks = new List<Task>();
 
                 //foreach (var meal in theUserMealsRoot.UserMeals)
@@ -147,9 +152,9 @@ namespace MealGeniusBackend.Services
                 //    // Ajouter la tâche de remplissage des données de repas à la liste
                 //    tasks.Add(GenerateMealsImages(meal, UserInputsJson, chatImageNarrativeGenerationResponse));
                 //}
+                #endregion
 
-
-                string mealPlanJson = Newtonsoft.Json.JsonConvert.SerializeObject(theUserMealsRoot);
+                string mealPlanJson = JsonConvert.SerializeObject(theUserMealsRoot);
 
 
 
@@ -162,6 +167,7 @@ namespace MealGeniusBackend.Services
                 {
                     userTask.MealsImagesStatus = UserMealsImagesStatus.Completed;
                     _logger.LogInformation($"All meal images were generated successfully");
+                    existingMealPlan.MealsImagesVersion += 1;
                     _dbContext.SaveChanges();
                     return;
                 }
@@ -169,7 +175,7 @@ namespace MealGeniusBackend.Services
 
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error while generating MealPlan");
+                _logger.LogError(ex, "Error while generating Meals images");
                 userTask.MealsImagesStatus = UserMealsImagesStatus.Failed;
                 _dbContext.SaveChanges();
             }
@@ -178,7 +184,6 @@ namespace MealGeniusBackend.Services
         async Task GenerateMealsImages(aMeal aMeal, string userData, string userImageNarrative)
         {
             try
-
             {
 
                 // Image Generation

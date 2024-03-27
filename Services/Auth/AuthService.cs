@@ -1,6 +1,7 @@
 ﻿using FluentEmail.Core;
 using FluentEmail.Core.Models;
 using MealGeniusBackend.DataAcess;
+using MealGeniusBackend.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -8,16 +9,16 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace MealGeniusBackend.Services
+namespace MealGeniusBackend.Services.Auth
 {
     // AuthService.cs (in your Services folder)
     public class AuthService : IAuthService
     {
-        private readonly UserManager<IdentityUser> _userManager;
+        private readonly UserManager<ApplicationUser>  _userManager;
         private readonly IConfiguration _configuration;
         private readonly JwtSecurityTokenHandler _tokenHandler;
 
-        public AuthService(UserManager<IdentityUser> userManager, IConfiguration configuration)
+        public AuthService(UserManager<ApplicationUser>  userManager, IConfiguration configuration)
         {
             _userManager = userManager;
             _configuration = configuration;

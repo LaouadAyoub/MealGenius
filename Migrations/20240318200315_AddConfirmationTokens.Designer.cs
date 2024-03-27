@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using MealGeniusBackend.DataAcess;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -12,86 +13,18 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MealGeniusBackend.Migrations
 {
     [DbContext(typeof(UserDbContext))]
-    partial class UserDbContextModelSnapshot : ModelSnapshot
+    [Migration("20240318200315_AddConfirmationTokens")]
+    partial class AddConfirmationTokens
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.3")
+                .HasAnnotation("ProductVersion", "7.0.9")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
-
-            modelBuilder.Entity("MealGeniusBackend.DataAccess.ApplicationUser", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasColumnType("text");
-
-                    b.Property<int>("AccessFailedCount")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("ConcurrencyStamp")
-                        .IsConcurrencyToken()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Email")
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
-
-                    b.Property<bool>("EmailConfirmed")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTime?>("EmailConfirmedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("FirstName")
-                        .HasColumnType("text");
-
-                    b.Property<bool>("LockoutEnabled")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTimeOffset?>("LockoutEnd")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("NormalizedEmail")
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
-
-                    b.Property<string>("NormalizedUserName")
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
-
-                    b.Property<string>("PasswordHash")
-                        .HasColumnType("text");
-
-                    b.Property<string>("PhoneNumber")
-                        .HasColumnType("text");
-
-                    b.Property<bool>("PhoneNumberConfirmed")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("SecurityStamp")
-                        .HasColumnType("text");
-
-                    b.Property<bool>("TwoFactorEnabled")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("UserName")
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("NormalizedEmail")
-                        .HasDatabaseName("EmailIndex");
-
-                    b.HasIndex("NormalizedUserName")
-                        .IsUnique()
-                        .HasDatabaseName("UserNameIndex");
-
-                    b.ToTable("AspNetUsers", (string)null);
-                });
 
             modelBuilder.Entity("MealGeniusBackend.DataAcess.ConfirmationToken", b =>
                 {
@@ -114,7 +47,7 @@ namespace MealGeniusBackend.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ConfirmationTokens");
+                    b.ToTable("ConfirmationTokens", (string)null);
                 });
 
             modelBuilder.Entity("MealGeniusBackend.DataAcess.GroceryItem", b =>
@@ -161,18 +94,9 @@ namespace MealGeniusBackend.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<long>("GroceryListVersion")
-                        .HasColumnType("bigint");
-
                     b.Property<string>("MealPlanJson")
                         .IsRequired()
                         .HasColumnType("jsonb");
-
-                    b.Property<long>("MealPlanVersion")
-                        .HasColumnType("bigint");
-
-                    b.Property<long>("MealsImagesVersion")
-                        .HasColumnType("bigint");
 
                     b.Property<Guid>("TaskId")
                         .HasColumnType("uuid");
@@ -190,8 +114,7 @@ namespace MealGeniusBackend.Migrations
                     b.HasIndex("TaskId")
                         .IsUnique();
 
-                    b.HasIndex("UserId")
-                        .HasDatabaseName("IX_MealPlans_UserId");
+                    b.HasIndex("UserId");
 
                     b.ToTable("MealPlans");
                 });
@@ -244,9 +167,6 @@ namespace MealGeniusBackend.Migrations
                     b.Property<Guid>("TaskId")
                         .HasColumnType("uuid");
 
-                    b.Property<long>("UserDashboardVersion")
-                        .HasColumnType("bigint");
-
                     b.Property<string>("UserGoalsGuide")
                         .IsRequired()
                         .HasColumnType("text");
@@ -264,8 +184,7 @@ namespace MealGeniusBackend.Migrations
                     b.HasIndex("TaskId")
                         .IsUnique();
 
-                    b.HasIndex("UserId")
-                        .HasDatabaseName("IX_UserDashboards_UserId");
+                    b.HasIndex("UserId");
 
                     b.ToTable("UserDashboards");
                 });
@@ -377,6 +296,70 @@ namespace MealGeniusBackend.Migrations
                     b.ToTable("AspNetRoleClaims", (string)null);
                 });
 
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUser", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<int>("AccessFailedCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<bool>("EmailConfirmed")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("LockoutEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset?>("LockoutEnd")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("NormalizedEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("NormalizedUserName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("PasswordHash")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PhoneNumber")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("PhoneNumberConfirmed")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("SecurityStamp")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("TwoFactorEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("UserName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NormalizedEmail")
+                        .HasDatabaseName("EmailIndex");
+
+                    b.HasIndex("NormalizedUserName")
+                        .IsUnique()
+                        .HasDatabaseName("UserNameIndex");
+
+                    b.ToTable("AspNetUsers", (string)null);
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
                 {
                     b.Property<int>("Id")
@@ -466,7 +449,7 @@ namespace MealGeniusBackend.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("MealGeniusBackend.DataAccess.ApplicationUser", "User")
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -485,7 +468,7 @@ namespace MealGeniusBackend.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("MealGeniusBackend.DataAccess.ApplicationUser", "User")
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -504,7 +487,7 @@ namespace MealGeniusBackend.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("MealGeniusBackend.DataAccess.ApplicationUser", "User")
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -517,7 +500,7 @@ namespace MealGeniusBackend.Migrations
 
             modelBuilder.Entity("MealGeniusBackend.DataAcess.UserTask", b =>
                 {
-                    b.HasOne("MealGeniusBackend.DataAccess.ApplicationUser", "User")
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -537,7 +520,7 @@ namespace MealGeniusBackend.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
                 {
-                    b.HasOne("MealGeniusBackend.DataAccess.ApplicationUser", null)
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -546,7 +529,7 @@ namespace MealGeniusBackend.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
                 {
-                    b.HasOne("MealGeniusBackend.DataAccess.ApplicationUser", null)
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -561,7 +544,7 @@ namespace MealGeniusBackend.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("MealGeniusBackend.DataAccess.ApplicationUser", null)
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -570,7 +553,7 @@ namespace MealGeniusBackend.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
                 {
-                    b.HasOne("MealGeniusBackend.DataAccess.ApplicationUser", null)
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)

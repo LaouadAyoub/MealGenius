@@ -1,0 +1,11 @@
+﻿using Microsoft.AspNetCore.Identity;
+
+namespace MealGeniusBackend.Models
+{
+    public class ApplicationUser : IdentityUser
+    {
+        public string? FirstName { get; set; }
+        public DateTime? EmailConfirmedAt { get; set; }
+
+    }
+}

@@ -1,5 +1,6 @@
 ﻿using MealGeniusBackend.DataAcess;
-using MealGeniusBackend.Services;
+using MealGeniusBackend.Models;
+using MealGeniusBackend.Services.Dashboard;
 using MealGeniusBackend.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -10,14 +11,14 @@ using Newtonsoft.Json;
 namespace MealGeniusBackend.Controllers
 {
     [Authorize]
-    [Route("[controller]")]
+    [Route("api/[controller]")]
     [ApiController]
     public class MealplanController : Controller
     {
-        private readonly UserManager<IdentityUser> _userManager;
+        private readonly UserManager<ApplicationUser>  _userManager;
         private readonly UserDbContext _dbcontext;
 
-        public MealplanController(UserManager<IdentityUser> userManager, UserDbContext dbcontext)
+        public MealplanController(UserManager<ApplicationUser>  userManager, UserDbContext dbcontext)
         {
             _userManager = userManager;
             _dbcontext = dbcontext;
@@ -43,7 +44,7 @@ namespace MealGeniusBackend.Controllers
             var username = user.UserName;
             if (latestMealPlan == null)
             {
-                return NotFound("User Mealplan not found.");
+                return NotFound("Mealplan not found.");
             }
 
             var userMealPlan = JsonConvert.DeserializeObject<UserMealsRoot>(latestMealPlan.MealPlanJson);
@@ -110,5 +111,9 @@ namespace MealGeniusBackend.Controllers
 
             return Ok(userGroceryListJson);
         }
+    
+    
+        
+
     }
 }

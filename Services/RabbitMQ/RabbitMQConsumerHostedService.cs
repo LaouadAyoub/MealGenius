@@ -2,7 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace MealGeniusBackend.Services
+namespace MealGeniusBackend.Services.RabbitMQ
 {
     public class RabbitMQConsumerHostedService : IHostedService
     {

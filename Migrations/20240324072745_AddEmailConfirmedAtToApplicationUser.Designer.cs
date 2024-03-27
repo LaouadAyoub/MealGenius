@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using MealGeniusBackend.DataAcess;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MealGeniusBackend.Migrations
 {
     [DbContext(typeof(UserDbContext))]
-    partial class UserDbContextModelSnapshot : ModelSnapshot
+    [Migration("20240324072745_AddEmailConfirmedAtToApplicationUser")]
+    partial class AddEmailConfirmedAtToApplicationUser
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -46,6 +49,7 @@ namespace MealGeniusBackend.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("FirstName")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<bool>("LockoutEnabled")
@@ -171,9 +175,6 @@ namespace MealGeniusBackend.Migrations
                     b.Property<long>("MealPlanVersion")
                         .HasColumnType("bigint");
 
-                    b.Property<long>("MealsImagesVersion")
-                        .HasColumnType("bigint");
-
                     b.Property<Guid>("TaskId")
                         .HasColumnType("uuid");
 
@@ -190,8 +191,7 @@ namespace MealGeniusBackend.Migrations
                     b.HasIndex("TaskId")
                         .IsUnique();
 
-                    b.HasIndex("UserId")
-                        .HasDatabaseName("IX_MealPlans_UserId");
+                    b.HasIndex("UserId");
 
                     b.ToTable("MealPlans");
                 });
@@ -264,8 +264,7 @@ namespace MealGeniusBackend.Migrations
                     b.HasIndex("TaskId")
                         .IsUnique();
 
-                    b.HasIndex("UserId")
-                        .HasDatabaseName("IX_UserDashboards_UserId");
+                    b.HasIndex("UserId");
 
                     b.ToTable("UserDashboards");
                 });

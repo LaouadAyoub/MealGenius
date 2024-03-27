@@ -1,33 +1,52 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿    <Project Sdk="Microsoft.NET.Sdk.Web">
 
-  <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <GenerateDocumentationFile>True</GenerateDocumentationFile>
-  </PropertyGroup>
+      <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <GenerateDocumentationFile>True</GenerateDocumentationFile>
+      </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="JsonFiles\Grocery_List_Detailed_Example.txt" />
+    <None Remove="JsonFiles\MealTotalBreakDown_JsonExample.txt" />
+    <None Remove="JsonFiles\Meal_PreData_Generation.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="JsonFiles\Grocery_List_Detailed_Example.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="JsonFiles\MealTotalBreakDown_JsonExample.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="JsonFiles\Meal_PreData_Generation.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Azure.Identity" Version="1.10.4" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.19.1" />
     <PackageReference Include="FluentEmail.Mailgun" Version="3.0.2" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="6.0.20" />
-    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="6.0.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="7.0.9" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="7.0.9">
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" Version="8.0.3" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.3" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.3" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.3" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.3">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="NLog" Version="5.2.2" />
-    <PackageReference Include="NLog.Extensions.Logging" Version="5.3.2" />
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="7.0.4" />
-    <PackageReference Include="OpenAI" Version="1.10.0" />
-    <PackageReference Include="RabbitMQ.Client" Version="6.5.0" />
+    <PackageReference Include="NLog" Version="5.2.8" />
+    <PackageReference Include="NLog.Extensions.Logging" Version="5.3.8" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.2" />
+    <PackageReference Include="OpenAI" Version="1.11.0" />
+    <PackageReference Include="RabbitMQ.Client" Version="6.8.1" />
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.3" />
-    <PackageReference Include="Stripe.net" Version="41.28.0" />
+    <PackageReference Include="Stripe.net" Version="43.19.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
-    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="6.32.0" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="7.4.1" />
     <PackageReference Include="System.Net.Http" Version="4.3.4" />
   </ItemGroup>
 
@@ -35,12 +54,42 @@
     <Folder Include="Migrations\" />
     <Folder Include="Models\UserModel\" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="JsonFiles\Grocery_List_Detailed_Example.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Update="JsonFiles\Grocery_List_Example.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Update="JsonFiles\Mealplan_Images.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Update="JsonFiles\Mealplan_no_images.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Update="JsonFiles\MealRecipe_JsonExample.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Update="JsonFiles\MealTotalBreakDown_JsonExample.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Update="JsonFiles\Meal_PreData_Generation.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Update="JsonFiles\UserDashboard_JsonExample.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 	<ItemGroup>
 		<None Update="appsettings.json">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
 		<None Update="appsettings.Production.json">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="EmailTemplate\emailTemplate.html">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 	</ItemGroup>
 </Project>
