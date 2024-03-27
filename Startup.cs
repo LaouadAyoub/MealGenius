@@ -58,8 +58,7 @@ public class Startup
             APIAuthentication.Default = new APIAuthentication(openaiApiKey);
 
             // Database Context Configuration
-            //var connectionString = Environment.GetEnvironmentVariable("MEALGENIUS_CONNECTIONSTRING");
-            var connectionString = "Host=mealgeniusdb-server.postgres.database.azure.com;Database=mainadmin1234;Username=mainadmin1234;Password=REDACTED";
+            var connectionString = Environment.GetEnvironmentVariable("MEALGENIUS_CONNECTIONSTRING");
             services.AddDbContext<UserDbContext>(options => options.UseNpgsql(connectionString));
 
             // Logging Configuration
