@@ -11,6 +11,7 @@ using System.Runtime.Intrinsics.X86;
 using System;
 using System.Text;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 // OpenAI_API.Models.Model.GPT4
 
 
@@ -61,12 +62,14 @@ namespace MealGeniusBackend.Services.Dashboard
                     throw new Exception("No meal plan found to generate the grocery list");
                 }
 
-                if (!existingMealPlan.GroceryListJson.IsNullOrEmpty())
-                {
-                    return;
-                }
+                //if (!existingMealPlan.GroceryListJson.IsNullOrEmpty())
+                //{
+                //    return;
+                //}
 
                 //Deserialize the meal plan json
+                var timer = new ServiceTaskTimer("GroceryList", "The generation of : Generate a JSON file that contains a comprehensive grocery list for a user");
+                timer.Start();
                 var myMealPlan = JsonConvert.DeserializeObject<UserMealsRoot>(existingMealPlan.MealPlanJson);
 
                 var groceryList_JsonExamplePath = "JsonFiles/Grocery_List_Example.json";
@@ -74,6 +77,7 @@ namespace MealGeniusBackend.Services.Dashboard
 
                 var UserInputsJson = userInput.UserData;
                 //GroceryList Generation
+
                 string systemPromptGroceryListGeneration = $@"You are an AI assistant for MealGenius, an app designed for personalized nutrition and meal planning.
 
 
@@ -89,17 +93,20 @@ namespace MealGeniusBackend.Services.Dashboard
                 string userPromptGroceryListGeneration = $@"
 Generate a JSON file that contains a comprehensive grocery list for a user,
 based on the following list of ingredients required to prepare their meals.
+[list of ingredients : this list contains the list of ingredients that the user needs to prepare all their meals :
+{myMealPlan!.DisplayAllIngredients()} ]
+
 The JSON should include an array of unique grocery items, ensuring that if an ingredient is mentioned more than once,
 it is listed only once in the final JSON file.
 Additionally, if the list includes prepared food items (e.g., ""Grilled Chicken Breast""),these should be converted into their raw, grocery-store equivalent (e.g., ""Chicken Breast"") to reflect items that are commonly found in grocery stores and supermarkets.
 This approach ensures the grocery list is practical for shopping, focusing on the ingredients' most basic and purchasable forms.
 The JSON structure should follow this Jsonformat:{groceryList_JsonExample}
-[list of ingredients : this list contains the list of ingredients that the user needs to prepare all their meals :
-{myMealPlan!.DisplayAllIngredients()} ]";
+";
                 var GroceryList_Json = await _openAIService.GenerateJsonBasedOnPromptResponseAsync(systemPromptGroceryListGeneration, userPromptGroceryListGeneration, maxTokens: 4000, model: "gpt-4-1106-preview", temperature: 0);
 
                 var groceryList = JsonConvert.DeserializeObject<GroceryList>(GroceryList_Json);
 
+                timer.StopAndLog();
 
 
                 // Loop over each category and convert the list of grocery items to a string
@@ -140,7 +147,8 @@ The JSON structure should follow this Jsonformat:{groceryList_JsonExample}
                 }
 
 
-
+                var timer1 = new ServiceTaskTimer("GroceryListService", " GenerateGroceryInfos");
+                timer1.Start();
                 foreach (var category in groceryCategoriesDetailed.GroceryCategories)
                 {
                     tasks.Add(GenerateGroceryInfos(category, UserInputsJson));
@@ -148,6 +156,7 @@ The JSON structure should follow this Jsonformat:{groceryList_JsonExample}
 
                 await Task.WhenAll(tasks);
 
+                timer1.StopAndLog();
 
 
                 existingMealPlan.GroceryListJson = JsonConvert.SerializeObject(groceryCategoriesDetailed);
@@ -268,11 +277,15 @@ The JSON structure should follow this Jsonformat:{groceryList_JsonExample}
                                 break;
                             }
                             var existingSimilarGroceryItemInSimilarNames = _dbContext.GroceryItems.FirstOrDefault(g => g.SimilarNames.Contains(similarName));
-                            if (existingSimilarGroceryItemInSimilarNames != null && !existingSimilarItem.ImageUrl.IsNullOrEmpty())
+                            if (existingSimilarGroceryItemInSimilarNames != null)
                             {
-                                groceryItem.GroceryItem_ImageUrl = existingSimilarGroceryItemInSimilarNames.CompressedImageUrl;
-                                imageFound = true;
-                                break;
+                                if (existingSimilarItem != null && !existingSimilarItem.ImageUrl.IsNullOrEmpty())
+                                {
+                                    groceryItem.GroceryItem_ImageUrl = existingSimilarItem.CompressedImageUrl;
+                                    imageFound = true;
+                                    break;
+                                }
+
                             }
                         }
                         if (imageFound)
@@ -302,6 +315,8 @@ The JSON structure should follow this Jsonformat:{groceryList_JsonExample}
 
                 userTask.UserOutputStatus = UserOutputStatus.GroceryListCompleted;
 
+                existingMealPlan.GroceryListVersion++;
+
                 _dbContext.SaveChanges();
 
                 return;
@@ -322,8 +337,9 @@ The JSON structure should follow this Jsonformat:{groceryList_JsonExample}
             // Define the maximum number of items per segment
             const int MaxItemsPerSegment = 12;
 
-            // Temporary list to hold all processed grocery items across segments
-            List<GroceryItem> allProcessedItems = new List<GroceryItem>();
+
+            // Create a list to hold all the tasks
+            List<Task<GroceryCategory>> tasks = new List<Task<GroceryCategory>>();
 
             // Determine the number of segments needed
             int segmentCount = (int)Math.Ceiling((double)groceryCategory.GroceryItems.Count / MaxItemsPerSegment);
@@ -332,18 +348,43 @@ The JSON structure should follow this Jsonformat:{groceryList_JsonExample}
             {
                 // Creating segments of GroceryItems
                 var segment = groceryCategory.GroceryItems.Skip(i * MaxItemsPerSegment).Take(MaxItemsPerSegment).ToList();
+                // Launch a task for each segment
+                tasks.Add(ProcessSegmentAsync(groceryCategory.CategoryName, segment, UserInputsJson));
+            }
+            // Wait for all tasks to complete
+            var results = await Task.WhenAll(tasks);
 
-                // Process each segment sequentially
-                string formattedSegmentGroceryItems = $"Category Name:{groceryCategory.CategoryName} \n Grocery Items: {string.Join(", ", segment.Select(groceryItem => groceryItem.GroceryItemName))}";
+            // Combine all processed items from each segment
+            List<GroceryItem> allProcessedItems = results.SelectMany(category => category.GroceryItems).ToList();
 
+            foreach (var item in allProcessedItems)
+            {
+                if(item.EssentialNutrients == null)
+                {
+                   
+                }
+                if (item.Benefits == null)
+                {
 
-                //string formattedGroceryItems = $"Category Name:{groceryCategory.CategoryName} \n Grocery Items: {string.Join(", ", groceryCategory.GroceryItems.Select(groceryItem => groceryItem.GroceryItemName))}";
+                }
+            }
 
-                var groceryList_JsonExamplePath = "JsonFiles/Grocery_List_Detailed_Example.json";
+            groceryCategory.GroceryItems = allProcessedItems;
 
-                string groceryListDEtailed_JsonExample = File.ReadAllText(groceryList_JsonExamplePath);
+        }
 
-                string systemPromptDetailedGroceryListGeneration = $@"You are an AI assistant for MealGenius, an app designed for personalized nutrition and meal planning.
+        private async Task<GroceryCategory> ProcessSegmentAsync(string categoryName, List<GroceryItem> segment, string userInputsJson)
+        {
+            // Process each segment sequentially
+            string formattedSegmentGroceryItems = $"Category Name:{categoryName} \n Grocery Items: {string.Join(", ", segment.Select(groceryItem => groceryItem.GroceryItemName))}";
+
+            //string formattedGroceryItems = $"Category Name:{groceryCategory.CategoryName} \n Grocery Items: {string.Join(", ", groceryCategory.GroceryItems.Select(groceryItem => groceryItem.GroceryItemName))}";
+
+            var groceryList_JsonExamplePath = "JsonFiles/Grocery_List_Detailed_Example.json";
+
+            string groceryListDEtailed_JsonExample = File.ReadAllText(groceryList_JsonExamplePath);
+
+            string systemPromptDetailedGroceryListGeneration = $@"You are an AI assistant for MealGenius, an app designed for personalized nutrition and meal planning.
 
 
                                 It focuses on setting nutritional goals and providing tailored meal plans based on user data.
@@ -353,10 +394,10 @@ The JSON structure should follow this Jsonformat:{groceryList_JsonExample}
                                 You can use emojis to add engagement and fun, but only where appropriate – do not overuse them.
 
                                 User information relevant informations is provided in the following JSON format.
-                                {UserInputsJson}
+                                {userInputsJson}
             ";
 
-                var userPromptDetailedGroceryListGeneration = $@"
+            var userPromptDetailedGroceryListGeneration = $@"
         Given a category name and a list of grocery items, 
         generate a detailed grocery information JSON that adheres to the provided format.
         Each entry should include the name of the grocery item, its benefits, and a list of essential nutrients.
@@ -369,8 +410,8 @@ The JSON structure should follow this Jsonformat:{groceryList_JsonExample}
         In similar names, you have to list also different names or nominations of the grocery item, for example, for Apple, we can find an image for Apples for example, the goal is to find an image for the grocery item that can be used for all the similar names of the grocery item, and to minimize the number of the image generated.
         GroceryItemName: Name of the grocery item
         SimilarNames : [List of similar names of the grocery item, Apples, Fresh apple]
+        Essential_Nutrients: List the essentiel nutrients presented this this GroceryItemn
         Health benefits: Health benefits of this GroceryItem for the user explained simply and clearly.
-        Essential_Nutrients: [Iron , Vitamin A, Protein]           // List the essentiel nutrients presented this this GroceryItemn
 
         The list of grocery items is as follows:
         {formattedSegmentGroceryItems}
@@ -385,15 +426,12 @@ The JSON structure should follow this Jsonformat:{groceryList_JsonExample}
         Align with MealGenius Theme: Ensure each description supports the MealGenius mission of combining education with enjoyment, helping users to discover the joy in healthy eating.
         ";
 
-                var GroceryListDetailed_Json = await _openAIService.GenerateJsonBasedOnPromptResponseAsync(systemPromptDetailedGroceryListGeneration, userPromptDetailedGroceryListGeneration, maxTokens: 4000, model: "gpt-4-1106-preview", temperature: 0.5);
+            var GroceryListDetailed_Json = await _openAIService.GenerateJsonBasedOnPromptResponseAsync(systemPromptDetailedGroceryListGeneration, userPromptDetailedGroceryListGeneration, maxTokens: 4000, model: "gpt-4-1106-preview", temperature: 0.5);
 
 
-                var groceryListDetailed = JsonConvert.DeserializeObject<GroceryCategory>(GroceryListDetailed_Json);
-                allProcessedItems.AddRange(groceryListDetailed.GroceryItems);
+            var groceryListDetailed = JsonConvert.DeserializeObject<GroceryCategory>(GroceryListDetailed_Json);
 
-            }
-            groceryCategory.GroceryItems = allProcessedItems;
-
+            return groceryListDetailed;
         }
 
     }

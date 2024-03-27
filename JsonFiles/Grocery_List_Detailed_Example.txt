@@ -1,0 +1,27 @@
+{
+  "Category_Name": "The name of the category",
+  // "Category_Name" describes the overall category or type of the grocery items listed.
+  "GroceryItems": [
+    {
+      "GroceryItemName": "Name of the grocery item",
+      // "GroceryItemName" specifies the name of a specific item in the grocery list.
+      "SimilarNames": [ "Similar names of this grocery item", "Similar names of this grocery item" ],
+      // "SimilarNames" provides alternative names or variations by which the grocery item may be known, helping users recognize it.
+      "Essential_Nutrients": [ "List the essential nutrients present in this GroceryItem", "Vitamin A", "Protein", "Fiber", "Omega3" ],
+      // "Essential_Nutrients" lists key nutrients that the grocery item is a good source of, highlighting its nutritional value.
+      "HealthBenefits": "Health benefits of this GroceryItem for the user explained simply and clearly"
+      // "HealthBenefits" explains the positive effects consuming the grocery item can have on the user's health, making the benefits relatable and easy to understand.
+    },
+    {
+      "GroceryItemName": "Banana",
+      "SimilarNames": [ "Bananas", "Ripe Banana", "Fresh Banana" ],
+      "EssentialNutrients": [
+        "Vitamin B6", 
+        "Vitamin C",
+        "Dietary Fiber",
+        "Manganese"
+      ],
+      "HealthBenefits": "Bananas are a great source of quick energy and are rich in..."
+    }
+  ]
+}

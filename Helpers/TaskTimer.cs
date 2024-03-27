@@ -22,10 +22,16 @@ public class ServiceTaskTimer
     public void StopAndLog()
     {
         _stopwatch.Stop();
-        var elapsedTime = _stopwatch.ElapsedMilliseconds;
+        var elapsedTimeMs = _stopwatch.ElapsedMilliseconds;
+
+        TimeSpan timeSpan = TimeSpan.FromMilliseconds(elapsedTimeMs);
+
+        string elapsedTimeFormatted = string.Format("{0} minutes, {1} seconds", timeSpan.Minutes, timeSpan.Seconds);
 
         // Log the result to a text file, specifying the service and task
-        LogTimeToFile($"Service: {_serviceName}, Task: {_taskName} took {elapsedTime} ms");
+        LogTimeToFile($"Service: {_serviceName}, Task: {_taskName} took {elapsedTimeMs} ms ({elapsedTimeFormatted})");
+
+
     }
 
     private void LogTimeToFile(string message)

@@ -1,6 +1,7 @@
 ﻿using FluentEmail.Core;
 using FluentEmail.Core.Models;
 using MealGeniusBackend.DataAcess;
+using MealGeniusBackend.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
@@ -9,7 +10,7 @@ namespace MealGeniusBackend.Services
 {
     public interface IEmailService
     {
-        Task SendConfirmationEmail(IdentityUser user, string name);
+        Task SendConfirmationEmail(ApplicationUser user, string name);
 
     }
 
@@ -17,19 +18,19 @@ namespace MealGeniusBackend.Services
     {
         private readonly FluentEmail.Core.IFluentEmailFactory _emailFactory;
         private readonly ILogger<EmailService> _logger;
-        private readonly UserManager<IdentityUser> _userManager;
+        private readonly UserManager<ApplicationUser>  _userManager;
         private readonly UserDbContext _dbcontext;
 
 
 
-        public EmailService(IFluentEmailFactory emailFactory, ILogger<EmailService> logger, UserManager<IdentityUser> userManager, UserDbContext dbcontext)
+        public EmailService(IFluentEmailFactory emailFactory, ILogger<EmailService> logger, UserManager<ApplicationUser>  userManager, UserDbContext dbcontext)
         {
             _emailFactory = emailFactory;
             _logger = logger;
             _userManager = userManager;
             _dbcontext = dbcontext;
         }
-        public async Task SendConfirmationEmail(IdentityUser user, string name)
+        public async Task SendConfirmationEmail(ApplicationUser user, string name)
         {
 
             // Generate the confirmation token

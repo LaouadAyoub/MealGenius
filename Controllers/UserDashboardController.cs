@@ -1,4 +1,5 @@
 ﻿using MealGeniusBackend.DataAcess;
+using MealGeniusBackend.Models;
 using MealGeniusBackend.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -13,10 +14,10 @@ namespace MealGeniusBackend.Controllers
     [ApiController]
     public class UserDashboardController : Controller
     {
-        private readonly UserManager<IdentityUser> _userManager;
+        private readonly UserManager<ApplicationUser> _userManager;
         private readonly UserDbContext _dbcontext;
 
-        public UserDashboardController(UserManager<IdentityUser> userManager, UserDbContext dbcontext)
+        public UserDashboardController(UserManager<ApplicationUser> userManager, UserDbContext dbcontext)
         {
             _userManager = userManager;
             _dbcontext = dbcontext;
@@ -64,26 +65,28 @@ namespace MealGeniusBackend.Controllers
             });
 
         }
-    }
-    public class NutritionData
-    {
-        public string BMR { get; set; }
-        public string TotalCaloricNeed { get; set; }
-        public string WaterIntake { get; set; }
-        public List<string> EssentialMicronutrients { get; set; }
-        public MacronutrientRatio MacronutrientRatio { get; set; }
-    }
 
-    public class MacronutrientRatio
-    {
-        public Macronutrient Protein { get; set; }
-        public Macronutrient Fats { get; set; }
-        public Macronutrient Carbohydrates { get; set; }
-    }
 
-    public class Macronutrient
-    {
-        public string Grams { get; set; }
-        public string Percentage { get; set; }
+        public class NutritionData
+        {
+            public string BMR { get; set; }
+            public string TotalCaloricNeed { get; set; }
+            public string WaterIntake { get; set; }
+            public List<string> EssentialMicronutrients { get; set; }
+            public MacronutrientRatio MacronutrientRatio { get; set; }
+        }
+
+        public class MacronutrientRatio
+        {
+            public Macronutrient Protein { get; set; }
+            public Macronutrient Fats { get; set; }
+            public Macronutrient Carbohydrates { get; set; }
+        }
+
+        public class Macronutrient
+        {
+            public string Grams { get; set; }
+            public string Percentage { get; set; }
+        }
     }
 }

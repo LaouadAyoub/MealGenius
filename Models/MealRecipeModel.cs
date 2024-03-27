@@ -14,6 +14,7 @@ namespace MealGeniusBackend.Models
     {
         public string MealName { get; set; }
         public Macronutrients Macronutrients { get; set; }
+        public Macronutrients_Pourcentage Macronutrients_Pourcentage { get; set; }
         public List<string> Micronutrients { get; set; }
         public string ServingSize { get; set; }
         public List<string> Ingredients { get; set; }

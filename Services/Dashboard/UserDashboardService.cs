@@ -64,11 +64,13 @@ namespace MealGeniusBackend.Services.Dashboard
                     MacroTargets = dashboardInfos.MacroTargets,
                     MicroGuide = dashboardInfos.MicroGuide,
                     WaterIntake = dashboardInfos.WaterIntake,
-                    JsonUserKeyInfos = dashboardInfos.JsonReponse
+                    JsonUserKeyInfos = dashboardInfos.JsonReponse,
+                    UserDashboardVersion = 1
                 };
 
                 // 3. Store info in UserDashboards table
                 _dbContext.UserDashboards.Add(newDashboard);
+
 
                 userTask.UserOutputStatus = UserOutputStatus.DashboardCompleted;
 

@@ -1,5 +1,4 @@
-﻿using MealGeniusBackend.DataAccess;
-using MealGeniusBackend.Services;
+﻿using MealGeniusBackend.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -18,6 +17,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using MealGeniusBackend.Services.Dashboard;
 using MealGeniusBackend.Services.Auth;
 using MealGeniusBackend.Services.RabbitMQ;
+using MealGeniusBackend.Models;
 
 public class Startup
 {
@@ -43,7 +43,7 @@ public class Startup
             {
                 options.AddPolicy("AllowSpecificOrigin", builder =>
                 {
-                    var frontendUrl = Environment.GetEnvironmentVariable("FRONTEND_URL") ?? "http://localhost:3012";
+                    var frontendUrl = Environment.GetEnvironmentVariable("FRONTEND_URL") ?? "http://localhost:3000";
 
                     builder.WithOrigins(frontendUrl)
                            .AllowAnyMethod()
@@ -58,7 +58,8 @@ public class Startup
             APIAuthentication.Default = new APIAuthentication(openaiApiKey);
 
             // Database Context Configuration
-            var connectionString = Environment.GetEnvironmentVariable("MEALGENIUS_CONNECTIONSTRING");
+            //var connectionString = Environment.GetEnvironmentVariable("MEALGENIUS_CONNECTIONSTRING");
+            var connectionString = "Host=mealgeniusdb-server.postgres.database.azure.com;Database=mainadmin1234;Username=mainadmin1234;Password=REDACTED";
             services.AddDbContext<UserDbContext>(options => options.UseNpgsql(connectionString));
 
             // Logging Configuration
@@ -158,7 +159,7 @@ public class Startup
 
     private void ConfigureAuthentication(IServiceCollection services)
     {
-        services.AddIdentity<IdentityUser, IdentityRole>(options =>
+        services.AddIdentity<ApplicationUser, IdentityRole>(options =>
         {
             options.SignIn.RequireConfirmedAccount = false; // Changed to false to accept non-confirmed accounts
         })  

@@ -5,10 +5,11 @@ using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using System.ComponentModel.DataAnnotations.Schema;
 using Newtonsoft.Json.Linq;
 using Azure.Storage.Blobs.Models;
+using MealGeniusBackend.Models;
 
 namespace MealGeniusBackend.DataAcess
 {
-    public class UserDbContext : IdentityDbContext
+    public class UserDbContext : IdentityDbContext<ApplicationUser> // Change this line
     {
         public UserDbContext(DbContextOptions<UserDbContext> options)
             : base(options)
@@ -28,9 +29,6 @@ namespace MealGeniusBackend.DataAcess
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
-
-
-
 
             // UserTask to UserDashboard one-to-one relationship
             builder.Entity<UserTask>()
@@ -68,6 +66,15 @@ namespace MealGeniusBackend.DataAcess
                 .WithMany()
                 .HasForeignKey(m => m.UserId);
 
+            // Ajout d'un index sur UserId dans la table MealPlan
+            builder.Entity<MealPlan>()
+                .HasIndex(m => m.UserId)
+                .HasDatabaseName("IX_MealPlans_UserId");
+
+            builder.Entity<UserDashboard>()
+                .HasIndex(d => d.UserId)
+                .HasDatabaseName("IX_UserDashboards_UserId");
+
             // Configuration pour GroceryItem
             builder.Entity<GroceryItem>(entity =>
             {
@@ -99,19 +106,7 @@ namespace MealGeniusBackend.DataAcess
 
 
 
-    public class UserDashboard
-    {
-        public Guid Id { get; set; }
-        public string UserId { get; set; }
-        public Guid TaskId { get; set; }
-        public string UserGoalsGuide { get; set; }
-        public string MacroTargets { get; set; }
-        public string MicroGuide { get; set; }
-        public string WaterIntake { get; set; }
-        public string JsonUserKeyInfos { get; set; }
-        public IdentityUser User { get; set; }
-        public UserTask Task { get; set; }
-    }
+
 
     public class UserTask
     {
@@ -123,7 +118,9 @@ namespace MealGeniusBackend.DataAcess
 
         public UserOutputStatus UserOutputStatus { get; set; }
 
-        public IdentityUser User { get; set; }
+        //public DateTime ExecutedAt { get; set; } 
+
+        public ApplicationUser User { get; set; }
 
         // Navigation property
         public UserDashboard UserDashboard { get; set; } 
@@ -135,7 +132,8 @@ namespace MealGeniusBackend.DataAcess
 
     public enum UserTaskStatus
     {
-        New,
+        NotStarted,
+        Ongoing,
         Completed,
         Failed
     }
@@ -163,7 +161,7 @@ namespace MealGeniusBackend.DataAcess
         public Guid TaskId { get; set; }
         public string UserData { get; set; }  // Storing JSON as string
 
-        public IdentityUser User { get; set; }
+        public ApplicationUser User { get; set; }
         public UserTask Task { get; set; }
     }
     public class MealPlan
@@ -178,9 +176,28 @@ namespace MealGeniusBackend.DataAcess
         [Column(TypeName = "jsonb")]  // 🌟 This is where the magic happens!
         public string MealPlanJson { get; set; }
         public string GroceryListJson { get; set; } // Added this line for the grocery list
-        public IdentityUser User { get; set; }
+        public ApplicationUser User { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+        public long MealPlanVersion { get; set; }
+        public long GroceryListVersion { get; set; }
+
+        public long MealsImagesVersion { get; set; }
+
+    }
+    public class UserDashboard
+    {
+        public Guid Id { get; set; }
+        public string UserId { get; set; }
+        public Guid TaskId { get; set; }
+        public string UserGoalsGuide { get; set; }
+        public string MacroTargets { get; set; }
+        public string MicroGuide { get; set; }
+        public string WaterIntake { get; set; }
+        public string JsonUserKeyInfos { get; set; }
+        public ApplicationUser User { get; set; }
+        public UserTask Task { get; set; }
+        public long UserDashboardVersion { get; set; }
     }
 
     public class GroceryItem

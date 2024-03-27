@@ -15,10 +15,10 @@ namespace MealGeniusBackend.Controllers
     [ApiController]
     public class MealplanController : Controller
     {
-        private readonly UserManager<IdentityUser> _userManager;
+        private readonly UserManager<ApplicationUser>  _userManager;
         private readonly UserDbContext _dbcontext;
 
-        public MealplanController(UserManager<IdentityUser> userManager, UserDbContext dbcontext)
+        public MealplanController(UserManager<ApplicationUser>  userManager, UserDbContext dbcontext)
         {
             _userManager = userManager;
             _dbcontext = dbcontext;
@@ -111,5 +111,9 @@ namespace MealGeniusBackend.Controllers
 
             return Ok(userGroceryListJson);
         }
+    
+    
+        
+
     }
 }

@@ -13,6 +13,7 @@ using Newtonsoft.Json;
 using NLog; // add this line
 using Stripe;
 using static MealGeniusBackend.Controllers.MainAPIController;
+using Stripe.Issuing;
 
 namespace MealGeniusBackend.Controllers
 {
@@ -22,7 +23,7 @@ namespace MealGeniusBackend.Controllers
     {
         private readonly RabbitMQService _rabbitMQService;
         private readonly UserDbContext _dbcontext;
-        private readonly UserManager<IdentityUser> _userManager;
+        private readonly UserManager<ApplicationUser> _userManager;
         private readonly IEmailService _emailService;
         private readonly IUserService _userService;
         private readonly ILogger<MainAPIController> _logger;
@@ -30,7 +31,7 @@ namespace MealGeniusBackend.Controllers
 
 
         public MainAPIController(RabbitMQService rabbitMQService, UserDbContext dbcontext
-            , UserManager<IdentityUser> userManager, IEmailService emailService, IUserService userService, ILogger<MainAPIController> logger)
+            , UserManager<ApplicationUser> userManager, IEmailService emailService, IUserService userService, ILogger<MainAPIController> logger)
         {
             _rabbitMQService = rabbitMQService;
             _userManager = userManager;
@@ -83,98 +84,31 @@ namespace MealGeniusBackend.Controllers
 
 
 
-        [HttpPost("ConfirmEmail")]
-        public async Task<IActionResult> ConfirmEmail([FromBody] EmailConfirmationModel model)
-        {
-            var output = new EmailConfirmationOutput();
-
-            try
-            {
-                if (await IsTokenExpired(model.UserId, model.Token))
-                {
-                    output.Message = "Token expired.";
-                    output.isConfirmed = false;
-                    output.isExpired = true; // Indicate the token is expired
-                    return BadRequest(output);
-                }
-
-                var user = await _userManager.FindByIdAsync(model.UserId);
-                if (user == null)
-                {
-                    output.Message = "User not found.";
-                    return BadRequest(output);
-                }
-
-                var confirmResult = await _userService.ConfirmEmailAsync(model.UserId, model.Token);
-                if (!confirmResult)
-                {
-                    _logger.LogWarning("Email confirmation failed for user with ID: {UserId}", model.UserId);
-                    output.Message = "Error confirming email.";
-                    output.isConfirmed = false;
-                    return BadRequest(output);
-                }
-
-                // Check if the user has set a password
-                output.isPasswordSet = await _userManager.HasPasswordAsync(user);
-
-                // Check if the username is set
-                output.isUsernameSet = !string.IsNullOrWhiteSpace(user.UserName) && user.UserName != user.Email;
-
-                // Update output with confirmation details
-                output.Message = "Email confirmed.";
-                output.isConfirmed = true;
-                output.SetConfirmedAt(DateTime.UtcNow);
-                output.Email = user.Email;
-
-                return Ok(output);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "An error occurred while confirming email for user with ID: {UserId}", model.UserId);
-                output.Message = "An internal error occurred.";
-                return StatusCode(StatusCodes.Status500InternalServerError, output);
-            }
-        }
 
 
-        private async Task<bool> IsTokenExpired(string userId, string token)
-        {
-            var tokenEntry = await _dbcontext.ConfirmationTokens
-                .Where(t => t.UserId == userId && t.Token == token)
-                .SingleOrDefaultAsync();
-
-            if (tokenEntry == null)
-            {
-                return true; // Token not found, treat as expired or invalid
-            }
-
-            var expiryPeriod = TimeSpan.FromHours(24); // Example: 24 hours
-            return DateTime.UtcNow - tokenEntry.IssuedAt > expiryPeriod;
-        }
-
-
+        #region ConfirmEmailGet
         // In MainAPIController
-        [HttpGet("ConfirmEmailGet")]
-        public async Task<IActionResult> ConfirmEmailGet(string userId, string token)
-        {
-            try
-            {
-                var confirmResult = await _userService.ConfirmEmailAsync(userId, token);
-                if (!confirmResult)
-                {
-                    _logger.LogWarning("Email confirmation failed for user with ID: {UserId}", userId);
-                    return BadRequest("Error confirming email.");
-                }
+        //[HttpGet("ConfirmEmailGet")]
+        //public async Task<IActionResult> ConfirmEmailGet(string userId, string token)
+        //{
+        //    try
+        //    {
+        //        var confirmResult = await _userService.ConfirmEmailAsync(userId, token);
+        //        if (!confirmResult)
+        //        {
+        //            _logger.LogWarning("Email confirmation failed for user with ID: {UserId}", userId);
+        //            return BadRequest("Error confirming email.");
+        //        }
 
-                return Ok("Email confirmed");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "An error occurred while confirming email for user with ID: {UserId}", userId);
-                return StatusCode(StatusCodes.Status500InternalServerError, "An internal error occurred.");
-            }
-        }
-
+        //        return Ok("Email confirmed");
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "An error occurred while confirming email for user with ID: {UserId}", userId);
+        //        return StatusCode(StatusCodes.Status500InternalServerError, "An internal error occurred.");
+        //    }
+        //}
+        #endregion
 
 
         [HttpPost("delete-user-by-email")]
@@ -222,16 +156,16 @@ namespace MealGeniusBackend.Controllers
 
 
 
-        //[Authorize]
+        [Authorize]
         [HttpGet("ExecuteTask")]
         public async Task<IActionResult> ExecuteUserTask()
         {
             try
             {
-                var username = "MoroccanCuisineLover";
+                //var username = "MoroccanCuisineLover";
                 // Get the current authenticated user
-                //var user = await _userManager.FindByNameAsync(User?.Identity?.Name);
-                var user = await _userManager.FindByNameAsync(username);
+                var user = await _userManager.FindByNameAsync(User?.Identity?.Name);
+                //var user = await _userManager.FindByNameAsync(username);
                 if (user == null)
                 {
                     _logger.LogWarning("ExecuteUserTask: User not found or not authenticated.");
@@ -250,7 +184,7 @@ namespace MealGeniusBackend.Controllers
                     userTask = new UserTask
                     {
                         UserId = user.Id,
-                        Status = UserTaskStatus.New,
+                        Status = UserTaskStatus.NotStarted,
                         CreatedAt = DateTime.UtcNow
                     };
                     await _dbcontext.Tasks.AddAsync(userTask);
