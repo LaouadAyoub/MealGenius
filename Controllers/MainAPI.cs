@@ -1,19 +1,15 @@
-﻿using FluentEmail.Core;
-using MealGeniusBackend.DataAcess;
+﻿using MealGeniusBackend.DataAcess;
+using MealGeniusBackend.Mapper;
 using MealGeniusBackend.Models;
-using MealGeniusBackend.Models.ModelsControllers;
-using MealGeniusBackend.Services.RabbitMQ;
-using MealGeniusBackend.Services.Auth;
 using MealGeniusBackend.Services;
+using MealGeniusBackend.Services.Auth;
+using MealGeniusBackend.Services.RabbitMQ;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
-using NLog; // add this line
-using Stripe;
-using static MealGeniusBackend.Controllers.MainAPIController;
-using Stripe.Issuing;
+using MealGeniusBackend.Middleware;
 
 namespace MealGeniusBackend.Controllers
 {
@@ -41,49 +37,122 @@ namespace MealGeniusBackend.Controllers
             _logger = logger;
         }
 
-
         [HttpPost("RegisterUser")]
-        public async Task<IActionResult> RegisterUser([FromBody] UserInputsDataModel inputData)
+        public async Task<IActionResult> RegisterUser([FromBody] UserProfile inputData)
         {
-            // Attempt to create the user
-            var createResult = await _userService.CreateUserAsync(inputData.UserDetails.Email);
-
-            if (!createResult.Result.Succeeded)
+            try
             {
-                // Handle failed user creation
-                return BadRequest(createResult.Result.Errors);
-            }
-            // Serialize inputData into a string
-            string serializedInputData = JsonConvert.SerializeObject(inputData);
-
-            // Create a new UserInput instance and add it to the database
-            var userInput = new UserInput
-            {
-                UserData = serializedInputData,
-                UserId = createResult.User.Id,
-                Task = new UserTask
+                var UserData = DtoMapper.MapUserProfileToUserData(inputData);
+                var existingUser = await _dbcontext.Users.FirstOrDefaultAsync(u => u.Email == inputData.Email);
+                if (existingUser != null)
                 {
-                    Id = Guid.NewGuid(),
-                    CreatedAt = DateTime.UtcNow,
-                    User = createResult.User
+                    var existingUserTask = await _dbcontext.Tasks.FirstOrDefaultAsync(t => t.UserId == existingUser.Id);
+
+                    if (existingUserTask != null && existingUserTask.Status == UserTaskStatus.Completed )
+                    {
+                        return BadRequest("User already exists, please login");
+                    }
+                   
+                    if (existingUser.ConfirmationEmailSentAt.HasValue &&
+                        DateTime.UtcNow - existingUser.ConfirmationEmailSentAt.Value < TimeSpan.FromMinutes(3))
+                    {
+                        var timeLeft = TimeSpan.FromMinutes(2) - (DateTime.UtcNow - existingUser.ConfirmationEmailSentAt.Value);
+                        var roundedSeconds = 5 * Math.Ceiling(timeLeft.Seconds / 5.0); // Round up to the nearest multiple of 5
+
+                        var timeComponent = timeLeft.TotalMinutes >= 1 ?
+                            $"{timeLeft.Minutes} minutes and {roundedSeconds} seconds" :
+                            $"{roundedSeconds} seconds";
+
+                        var message = $"Email confirmation has been sent. Please check your inbox and other email folders, or you can retry to resend the email in {timeComponent}.";
+
+                        return BadRequest(new { message });
+                    }
+
+                    await ResendConfirmationEmail(existingUser, inputData.Name);
+                    return Ok(new { message = "Email confirmation has been resent. Please check your email." });
                 }
-            };
 
+                var createResult = await _userService.CreateUserAsync(inputData.Email, inputData.Name);
+                if (!createResult.Result.Succeeded)
+                {
+                    return BadRequest(createResult.Result.Errors);
+                }
 
-            _dbcontext.UserInputs.Add(userInput);
-            await _dbcontext.SaveChangesAsync(); // Don't forget to save changes to the database
+                string serializedInputData = JsonConvert.SerializeObject(UserData);
+                var userInput = new UserInput
+                {
+                    UserData = serializedInputData,
+                    UserId = createResult.User.Id,
+                    Task = new UserTask
+                    {
+                        Id = Guid.NewGuid(),
+                        CreatedAt = DateTime.UtcNow,
+                        User = createResult.User
+                    }
+                };
 
-            // Send confirmation email (now includes token generation and link construction)
-            await _emailService.SendConfirmationEmail(createResult.User, inputData.UserDetails.Name);
+                _dbcontext.UserInputs.Add(userInput);
+                await _dbcontext.SaveChangesAsync();
 
+                await SendConfirmationEmailAndUpdateTimestamp(createResult.User, inputData.Name);
 
-            // Continue with user registration process...
-            return Ok("Registration successful! Please check your email to confirm your account.");
+                return Ok("Registration successful! Please check your email to confirm your account.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred during the registration process.");
+                return StatusCode(500, "An internal error occurred. Please try again later.");
+            }
+        }
+
+        private async Task SendConfirmationEmailAndUpdateTimestamp(ApplicationUser user, string name)
+        {
+            try
+            {
+                await _emailService.SendConfirmationEmail(user, name);
+                user.ConfirmationEmailSentAt = DateTime.UtcNow;
+                await _dbcontext.SaveChangesAsync();
+                _logger.LogInformation("Confirmation email sent successfully and timestamp updated.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send confirmation email or update timestamp.");
+                throw; // Rethrow to handle the error further up the call stack.
+            }
+        }
+
+        private async Task ResendConfirmationEmail(ApplicationUser user, string name)
+        {
+            await SendConfirmationEmailAndUpdateTimestamp(user, name);
+            _logger.LogInformation($"Confirmation email resent to {user.Email}.");
         }
 
 
 
+        [HttpPost]
+        [Route("registerPayment")]
+        [ApiKeyAuth]
+        public IActionResult RegisterPayment([FromBody] PaymentRegistration paymentRegistration)
+        {
+            // Implement your logic here, e.g., saving the payment information to the database
 
+            // For example:
+            _logger.LogInformation($"Received payment from {paymentRegistration.Email} of amount {paymentRegistration.PaymentAmount}");
+
+            var aPaymentRegistration = new PaymentRegistrationTable 
+            {
+                Email = paymentRegistration.Email,
+                PaymentID = paymentRegistration.PaymentID,
+                PaymentAmount = paymentRegistration.PaymentAmount,
+                PaymentCurrency = paymentRegistration.PaymentCurrency,
+                PaymentDate = paymentRegistration.PaymentDate,
+                Country = paymentRegistration.Country
+            };
+            _dbcontext.PaymentRegistrations.Add(aPaymentRegistration);
+            _dbcontext.SaveChanges();
+            // Return a success response
+            return Ok();
+        }
 
 
         #region ConfirmEmailGet

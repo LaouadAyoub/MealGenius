@@ -6,6 +6,10 @@ using System.ComponentModel.DataAnnotations.Schema;
 using Newtonsoft.Json.Linq;
 using Azure.Storage.Blobs.Models;
 using MealGeniusBackend.Models;
+using System.Reflection.Emit;
+using MealGeniusBackend.Controllers;
+using Newtonsoft.Json;
+using System.ComponentModel.DataAnnotations;
 
 namespace MealGeniusBackend.DataAcess
 {
@@ -23,6 +27,8 @@ namespace MealGeniusBackend.DataAcess
         //ADD NotFoundGroceryItems as a new table a new DbSet
         public DbSet<NotFoundGroceryItems> NotFoundGroceryItems { get; set; }
         public DbSet<ConfirmationToken> ConfirmationTokens { get; set; }
+        public DbSet<Feedback> Feedbacks { get; set; }
+        public DbSet<PaymentRegistrationTable> PaymentRegistrations { get; set; }
 
 
 
@@ -48,12 +54,32 @@ namespace MealGeniusBackend.DataAcess
                 .WithOne(m => m.Task)
                 .HasForeignKey<MealPlan>(m => m.TaskId);
 
+            builder.Entity<UserTask>()
+            .Property(e => e.DashboardGenerationEstimationTime)
+            .HasConversion(
+                v => (long)v.TotalSeconds, // TimeSpan to long (when saving to DB)
+                v => TimeSpan.FromSeconds(v) // long to TimeSpan (when reading from DB)
+                    );
+
+            builder.Entity<UserTask>()
+                .Property(e => e.MealsGenerationEstimationTime)
+                .HasConversion(
+                    v => (long)v.TotalSeconds, 
+                    v => TimeSpan.FromSeconds(v) 
+            );
+
+            builder.Entity<UserTask>()
+                .Property(e => e.GroceryListGenerationEstimationTime)
+                .HasConversion(
+                    v => (long)v.TotalSeconds, 
+                    v => TimeSpan.FromSeconds(v)
+                );
+
             // Constraints on UserId in MealPlan, UserInput, UserDashboard to match IdentityUser
             builder.Entity<UserDashboard>()
                 .HasOne(d => d.User)
                 .WithMany()
                 .HasForeignKey(d => d.UserId);
-
 
 
             builder.Entity<UserInput>()
@@ -93,6 +119,10 @@ namespace MealGeniusBackend.DataAcess
                 entity.Property(e => e.Name).IsRequired();
                 entity.Property(e => e.Category).IsRequired();
             });
+
+            builder.Entity<PaymentRegistrationTable>()
+                .HasKey(p => p.PaymentID);
+
         }
     }
 
@@ -105,7 +135,28 @@ namespace MealGeniusBackend.DataAcess
     }
 
 
+    public class PaymentRegistrationTable
+    {
+        public string Email { get; set; }
+        [Key]
+        public string PaymentID { get; set; }
+        public string PaymentAmount { get; set; }
 
+        public string PaymentCurrency { get; set; }
+
+        public string PaymentDate { get; set; }
+
+        public string Country { get; set; }
+    }
+    public class Feedback
+    {
+        public int Id { get; set; }
+        public int Rating { get; set; }
+        public string Like { get; set; }
+        public string Improvement { get; set; }
+
+        public string UserId { get; set; }
+    }
 
 
     public class UserTask
@@ -127,6 +178,16 @@ namespace MealGeniusBackend.DataAcess
         public UserInput UserInput { get; set; } 
         public MealPlan MealPlan { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        public DateTime? MealsGenerationExcecutedAt { get; set; }
+        public DateTime? GroceryListsGenerationExcecutedAt { get; set; }
+        public DateTime? DashboardsGenerationExcecutedAt { get; set; }
+        public DateTime? MealsImagesGenerationExcecutedAt { get; set; }
+
+        public TimeSpan MealsGenerationEstimationTime { get; set; } = TimeSpan.FromSeconds(60 * 3 + 30);
+
+        public TimeSpan GroceryListGenerationEstimationTime { get; set; } = TimeSpan.FromSeconds(60 * 1 + 45);
+        public TimeSpan DashboardGenerationEstimationTime { get; set; } = TimeSpan.FromSeconds(45);
 
     }
 

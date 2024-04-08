@@ -23,7 +23,6 @@ namespace MealGeniusBackend.Services.Dashboard
     }
 
 
-
     public class GroceryListService : IGroceryListService
     {
         private readonly UserDbContext _dbContext;
@@ -42,9 +41,11 @@ namespace MealGeniusBackend.Services.Dashboard
         public async Task GenerateGroceryList(UserTaskDTO userTaskDTO)
         {
             var userTask = _dbContext.Tasks.Where(u => u.Id == userTaskDTO.Id).FirstOrDefault();
+
             try
             {
-
+                userTask.GroceryListsGenerationExcecutedAt = DateTime.UtcNow;
+                await _dbContext.SaveChangesAsync();
                 // Logic for generating a user dashboard
                 var userInput = _dbContext.UserInputs
                             .Where(u => u.TaskId == userTaskDTO.Id)
@@ -62,10 +63,10 @@ namespace MealGeniusBackend.Services.Dashboard
                     throw new Exception("No meal plan found to generate the grocery list");
                 }
 
-                //if (!existingMealPlan.GroceryListJson.IsNullOrEmpty())
-                //{
-                //    return;
-                //}
+                if (!existingMealPlan.GroceryListJson.IsNullOrEmpty())
+                {
+                    return;
+                }
 
                 //Deserialize the meal plan json
                 var timer = new ServiceTaskTimer("GroceryList", "The generation of : Generate a JSON file that contains a comprehensive grocery list for a user");
@@ -161,7 +162,7 @@ The JSON structure should follow this Jsonformat:{groceryList_JsonExample}
 
                 existingMealPlan.GroceryListJson = JsonConvert.SerializeObject(groceryCategoriesDetailed);
 
-                _dbContext.SaveChanges();
+                await _dbContext.SaveChangesAsync();
                 _logger.LogInformation($"Grocerylist generated for UserId: {userTaskDTO.UserId}");
 
                 // Generate images for grocery items
@@ -240,7 +241,7 @@ The JSON structure should follow this Jsonformat:{groceryList_JsonExample}
                         {
                             existingMealPlan.GroceryListJson = JsonConvert.SerializeObject(existing_groceryList);
 
-                            _dbContext.SaveChanges();
+                            await _dbContext.SaveChangesAsync();
                             continue;
                         }
 
@@ -292,7 +293,7 @@ The JSON structure should follow this Jsonformat:{groceryList_JsonExample}
                         {
                             existingMealPlan.GroceryListJson = JsonConvert.SerializeObject(existing_groceryList);
 
-                            _dbContext.SaveChanges();
+                            await _dbContext.SaveChangesAsync();
                             continue;
                         }
                         //Make a list of strings to one string string1, string2,string3
@@ -303,7 +304,7 @@ The JSON structure should follow this Jsonformat:{groceryList_JsonExample}
                             groceryItemSimilarNamesToLower = groceryItem.SimilarNames.Select(name => name.ToLower()).ToList();
 
 
-                            _dbContext.NotFoundGroceryItems.Add(new NotFoundGroceryItems { GroceryItemId = new Guid(), Name = groceryItem.GroceryItemName, Category = groceryCategory.CategoryName, SimilarGroceryItemFound = "", SimilarNames = groceryItemSimilarNamesToLower });
+                            await _dbContext.NotFoundGroceryItems.AddAsync(new NotFoundGroceryItems { GroceryItemId = new Guid(), Name = groceryItem.GroceryItemName, Category = groceryCategory.CategoryName, SimilarGroceryItemFound = "", SimilarNames = groceryItemSimilarNamesToLower });
                         }
 
 
@@ -317,7 +318,7 @@ The JSON structure should follow this Jsonformat:{groceryList_JsonExample}
 
                 existingMealPlan.GroceryListVersion++;
 
-                _dbContext.SaveChanges();
+                await _dbContext.SaveChangesAsync();
 
                 return;
 
@@ -326,8 +327,9 @@ The JSON structure should follow this Jsonformat:{groceryList_JsonExample}
             catch (Exception ex)
             {
                 userTask.Status = UserTaskStatus.Failed;
-
-                _logger.LogError(ex, "Error while generating MealPlan");
+                await _dbContext.SaveChangesAsync();
+                _logger.LogError(ex, "Error while generating grocery list");
+                throw;
             }
         }
 
@@ -398,33 +400,33 @@ The JSON structure should follow this Jsonformat:{groceryList_JsonExample}
             ";
 
             var userPromptDetailedGroceryListGeneration = $@"
-        Given a category name and a list of grocery items, 
-        generate a detailed grocery information JSON that adheres to the provided format.
-        Each entry should include the name of the grocery item, its benefits, and a list of essential nutrients.
-        The descriptions should be both informative and entertaining, in line with the MealGenius theme of making nutrition education enjoyable.
-        The JSON structure should follow this format:
-        {groceryListDEtailed_JsonExample}
+                Given a category name and a list of grocery items, 
+                generate a detailed grocery information JSON that adheres to the provided format.
+                Each entry should include the name of the grocery item, its benefits, and a list of essential nutrients.
+                The descriptions should be both informative and entertaining, in line with the MealGenius theme of making nutrition education enjoyable.
+                The JSON structure should follow this format:
+                {groceryListDEtailed_JsonExample}
         
-        Because for each Grocery item, we have to generate the related image of the grocery item, to minimize the number of the image generated, you have to choose the grocery Item names to be the most pupular one 
-        in the grocery store, and how the item is named and purchased in the grocery store, for example : instead of choosing Red Apple, you have to choose Apple as the grocery item name. 
-        In similar names, you have to list also different names or nominations of the grocery item, for example, for Apple, we can find an image for Apples for example, the goal is to find an image for the grocery item that can be used for all the similar names of the grocery item, and to minimize the number of the image generated.
-        GroceryItemName: Name of the grocery item
-        SimilarNames : [List of similar names of the grocery item, Apples, Fresh apple]
-        Essential_Nutrients: List the essentiel nutrients presented this this GroceryItemn
-        Health benefits: Health benefits of this GroceryItem for the user explained simply and clearly.
+                Because for each Grocery item, we have to generate the related image of the grocery item, to minimize the number of the image generated, you have to choose the grocery Item names to be the most pupular one 
+                in the grocery store, and how the item is named and purchased in the grocery store, for example : instead of choosing Red Apple, you have to choose Apple as the grocery item name. 
+                In similar names, you have to list also different names or nominations of the grocery item, for example, for Apple, we can find an image for Apples for example, the goal is to find an image for the grocery item that can be used for all the similar names of the grocery item, and to minimize the number of the image generated.
+                GroceryItemName: Name of the grocery item
+                SimilarNames : [List of similar names of the grocery item, Apples, Fresh apple]
+                Essential_Nutrients: List the essentiel nutrients presented this this GroceryItemn
+                Health benefits: Health benefits of this GroceryItem for the user explained simply and clearly.
 
-        The list of grocery items is as follows:
-        {formattedSegmentGroceryItems}
+                The list of grocery items is as follows:
+                {formattedSegmentGroceryItems}
         
 
-        Instructions for GPT:
+                Instructions for GPT:
 
-        Make It Informative: Provide actual benefits and essential nutrients of each grocery item, showcasing its health benefits and nutritional content.
+                Make It Informative: Provide actual benefits and essential nutrients of each grocery item, showcasing its health benefits and nutritional content.
 
-        Keep It Entertaining: Use playful language and creative descriptions to engage the reader, making the learning process about nutrition fun and memorable.
+                Keep It Entertaining: Use playful language and creative descriptions to engage the reader, making the learning process about nutrition fun and memorable.
 
-        Align with MealGenius Theme: Ensure each description supports the MealGenius mission of combining education with enjoyment, helping users to discover the joy in healthy eating.
-        ";
+                Align with MealGenius Theme: Ensure each description supports the MealGenius mission of combining education with enjoyment, helping users to discover the joy in healthy eating.
+                ";
 
             var GroceryListDetailed_Json = await _openAIService.GenerateJsonBasedOnPromptResponseAsync(systemPromptDetailedGroceryListGeneration, userPromptDetailedGroceryListGeneration, maxTokens: 4000, model: "gpt-4-1106-preview", temperature: 0.5);
 
@@ -460,8 +462,6 @@ The JSON structure should follow this Jsonformat:{groceryList_JsonExample}
     }
 
     // GroceryItem remains the same
-
-
     public class GroceryItem
     {
         [JsonProperty("GroceryItemName")]

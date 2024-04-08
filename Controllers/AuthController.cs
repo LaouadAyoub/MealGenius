@@ -73,10 +73,9 @@ namespace MealGeniusBackend.Controllers
             }
 
             var userInputs = _dbcontext.UserInputs.FirstOrDefault(UI => UI.User.Email == user.Email);
-            var userData = userInputs.UserData;
-            if (userData  == null)
+            if (userInputs.UserData.IsNullOrEmpty())
             {
-                loginOutput.Message = "User data not found, you should register again!";
+                loginOutput.Message = "User data not found, you can register again!";
                 loginOutput.Email = user.Email;
                 //delete the user 
                 _dbcontext.Remove(user);
@@ -114,17 +113,29 @@ namespace MealGeniusBackend.Controllers
             // Check password validity
             if (!await _userManager.CheckPasswordAsync(user, userLoginDto.Password))
             {
-                loginOutput.Message = "Invalid login attempt.";
-                return Unauthorized(loginOutput);
+                loginOutput.Message = "Invalid login attempt, wrong password, please try again";
+                return Unauthorized(new { loginOutput.Message });
+
             }
             // User is successfully logged in
             loginOutput.IsLoginSuccess = true;
-            loginOutput.Message = "Login successful";
+            loginOutput.Message = "You have successfully logged in !";
             loginOutput.Email = user.Email;
             var token = await _authService.GenerateToken(user);
             SetAuthTokenCookie(token);
 
             return Ok(loginOutput);
+        }
+
+
+        public class LoginOutput
+        {
+            public bool IsLoginSuccess { get; set; }
+            public string Message { get; set; }
+            public bool IsEmailConfirmed { get; set; }
+            public string Email { get; set; }
+            public bool IsPasswordSet { get; set; }
+            public bool IsUsernameSet { get; set; }
         }
 
         //[HttpGet("GoogleLogin")]
@@ -172,15 +183,6 @@ namespace MealGeniusBackend.Controllers
         //    }
         //}
 
-        public class LoginOutput
-        {
-            public bool IsLoginSuccess { get; set; }
-            public string Message { get; set; }
-            public bool IsEmailConfirmed { get; set; }
-            public string Email { get; set; }
-            public bool IsPasswordSet { get; set; }
-            public bool IsUsernameSet { get; set; }
-        }
 
 
         [HttpPost("ConfirmEmail")]
@@ -196,6 +198,16 @@ namespace MealGeniusBackend.Controllers
                     output.Message = "User not found.";
                     return BadRequest(output);
                 }
+
+                if (await IsTokenExpired(model.UserId, model.Token))
+                {
+                    output.Email = user.Email;
+                    output.Message = "Token expired.";
+                    output.isConfirmed = false;
+                    output.isExpired = true;
+                    return StatusCode(StatusCodes.Status401Unauthorized, output); // 401 for token expired
+                }
+
 
 
                 // Check if the user has set a password
@@ -215,6 +227,7 @@ namespace MealGeniusBackend.Controllers
                     output.Email = user.Email!;
                     output.isUsernameSet = true;
                     output.isPasswordSet = true;
+
                     return Ok(output);
                 }
                 if(output.isPasswordSet)
@@ -249,14 +262,6 @@ namespace MealGeniusBackend.Controllers
                     return Ok(output);
                 }
 
-                if (await IsTokenExpired(model.UserId, model.Token))
-                {
-                    output.Email = user.Email;
-                    output.Message = "Token expired.";
-                    output.isConfirmed = false;
-                    output.isExpired = true;
-                    return StatusCode(StatusCodes.Status401Unauthorized, output); // 401 for token expired
-                }
 
 
 
@@ -317,7 +322,7 @@ namespace MealGeniusBackend.Controllers
                 return true; // Token not found, treat as expired or invalid
             }
 
-            var expiryPeriod = TimeSpan.FromHours(24); // Example: 24 hours
+            var expiryPeriod = TimeSpan.FromHours(48); // Example: 24 hours
             return DateTime.UtcNow - tokenEntry.IssuedAt > expiryPeriod;
         }
 
@@ -330,6 +335,17 @@ namespace MealGeniusBackend.Controllers
                 SameSite = SameSiteMode.None,
                 Expires = DateTime.UtcNow.AddDays(1),
             };
+            var isProduction_str = Environment.GetEnvironmentVariable("IsProduction");
+
+            // convert string to bool 
+            bool isProduction = isProduction_str == "true" ? true : false;
+
+            if (isProduction)
+            {
+                cookieOptions.Domain = ".mealgenius.guru";
+            }
+
+
 
             Response.Cookies.Append("AuthToken", token, cookieOptions);
         }

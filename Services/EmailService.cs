@@ -32,57 +32,80 @@ namespace MealGeniusBackend.Services
         }
         public async Task SendConfirmationEmail(ApplicationUser user, string name)
         {
-
-            // Generate the confirmation token
-            var confirmationToken = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-
-            _dbcontext.ConfirmationTokens.Add(new ConfirmationToken
+            try
             {
-                UserId = user.Id,
-                Token = confirmationToken,
-                IssuedAt = DateTime.UtcNow
-            });
+                _logger.LogInformation("Generating email confirmation token.");
+                var confirmationToken = await _userManager.GenerateEmailConfirmationTokenAsync(user);
 
-            await _dbcontext.SaveChangesAsync();
-            // Build the confirmation link
-            var frontendBaseUrl = "http://localhost:3000";
+                _dbcontext.ConfirmationTokens.Add(new ConfirmationToken
+                {
+                    UserId = user.Id,
+                    Token = confirmationToken,
+                    IssuedAt = DateTime.UtcNow
+                });
+                await _dbcontext.SaveChangesAsync();
+                _logger.LogInformation("Confirmation token generated and saved.");
+
+                var confirmationLink = BuildConfirmationLink(user.Id, confirmationToken);
+                var htmlTemplate = LoadEmailTemplate();
+                htmlTemplate = CustomizeEmailTemplate(htmlTemplate, name, confirmationLink);
+
+                await SendEmail(user.Email, htmlTemplate);
+                _logger.LogInformation("Confirmation email sent successfully.");
+                user.ConfirmationEmailSentAt = DateTime.UtcNow;
+            }
+            catch (FileNotFoundException ex)
+            {
+                _logger.LogError(ex, "Email template file not found.");
+                throw new InvalidOperationException("The email confirmation process failed due to a missing template.", ex);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send confirmation email.");
+                throw new InvalidOperationException("An unexpected error occurred while sending the confirmation email.", ex);
+            }
+        }
+
+        private string BuildConfirmationLink(string userId, string token)
+        {
+            var frontendBaseUrl = Environment.GetEnvironmentVariable("FRONTEND_URL") ?? "http://localhost:3000";
             var confirmationPageRoute = Environment.GetEnvironmentVariable("CONFIRMATION_PAGE_ROUTE") ?? "/confirm-account";
-            var confirmationLink = $"{frontendBaseUrl}{confirmationPageRoute}?userId={user.Id}&token={Uri.EscapeDataString(confirmationToken)}";
+            return $"{frontendBaseUrl}{confirmationPageRoute}?userId={userId}&token={Uri.EscapeDataString(token)}";
+        }
 
-            // Load your HTML template as a string
+        private string LoadEmailTemplate()
+        {
             string filePath = Path.Combine(Directory.GetCurrentDirectory(), "EmailTemplate", "emailTemplate.html");
             if (!File.Exists(filePath))
             {
                 throw new FileNotFoundException($"The file {filePath} was not found.");
             }
 
-            string htmlTemplate = File.ReadAllText(filePath);
+            return File.ReadAllText(filePath);
+        }
 
-            // Replace placeholders in the HTML template
-            htmlTemplate = htmlTemplate.Replace("{Name}", name);
-            htmlTemplate = htmlTemplate.Replace("{confirmationLink}", confirmationLink);
+        private string CustomizeEmailTemplate(string template, string name, string confirmationLink)
+        {
+            return template.Replace("{Name}", name).Replace("{confirmationLink}", confirmationLink);
+        }
 
-            // Prepare and send the email
+        private async Task SendEmail(string toEmail, string htmlTemplate)
+        {
             var email = _emailFactory.Create()
-                .To(user.Email)
-                .Subject("MealGenius Email confirmation")
+                .To(toEmail)
+                .Subject("MealGenius Email Confirmation")
                 .Body(htmlTemplate, isHtml: true);
 
             var response = await email.SendAsync();
             if (!response.Successful)
             {
-                // Handle the error appropriately
+                _logger.LogError($"Failed to send confirmation email: {string.Join(", ", response.ErrorMessages)}");
                 throw new Exception($"Failed to send confirmation email: {string.Join(", ", response.ErrorMessages)}");
             }
         }
 
 
-        // Method to load the HTML template as a string (this is a placeholder, implement accordingly)
-        private string LoadTemplateFromFile(string filePath)
-        {
-            // Your method to load the HTML content from a file
-            return System.IO.File.ReadAllText(filePath);
-        }
+
 
     }
 }

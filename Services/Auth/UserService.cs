@@ -33,7 +33,7 @@ namespace MealGeniusBackend.Services.Auth
                 Email = iEmail,
                 UserName = iEmail, // Temporarily set the UserName to the email address
                 EmailConfirmed = false, // This is default, explicitly setting it for clarity
-                FirstName = iFirstName
+                FirstName = iFirstName,
             };
 
             var result = await _userManager.CreateAsync(user);

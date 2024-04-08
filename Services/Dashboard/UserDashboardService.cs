@@ -28,9 +28,14 @@ namespace MealGeniusBackend.Services.Dashboard
         public async Task GenerateUserDashboard(UserTaskDTO userTaskDTO)
         {
 
-            var userTask = _dbContext.Tasks.Where(u => u.Id == userTaskDTO.Id).FirstOrDefault();
+            var userTask = _dbContext.Tasks.Where(u => u.Id == userTaskDTO.Id).FirstOrDefault();   
             try
             {
+
+                userTask.DashboardsGenerationExcecutedAt = DateTime.UtcNow;
+
+                await _dbContext.SaveChangesAsync();
+
                 // Logic for generating a user dashboard
                 var userInput = _dbContext.UserInputs
                             .Where(u => u.TaskId == userTaskDTO.Id)
@@ -40,8 +45,6 @@ namespace MealGeniusBackend.Services.Dashboard
                     _logger.LogError("UserInput not found");
                     return;
                 }
-                //TODO : should i really serialise/deserialise ?
-                //UserInputsDataModel userDataModel = JsonConvert.DeserializeObject<UserInputsDataModel>(userInput.UserData);
 
 
                 var existingDashboard = _dbContext.UserDashboards.SingleOrDefault(dashboard => dashboard.TaskId == userTaskDTO.Id);
@@ -79,9 +82,18 @@ namespace MealGeniusBackend.Services.Dashboard
             }
             catch (Exception ex)
             {
-                userTask.Status = UserTaskStatus.Failed;
-                await _dbContext.SaveChangesAsync();
+                try
+                {
+                    userTask.Status = UserTaskStatus.Failed;
+                    await _dbContext.SaveChangesAsync();
+                }
+                catch (Exception ex2)
+                {
+                    _logger.LogError(ex2, "Error while updating user task status to failed");
+                    throw;
+                }
                 _logger.LogError(ex, "Error while generating user dashboard");
+                throw;
             }
         }
 

@@ -56,6 +56,7 @@ namespace MealGeniusBackend.Controllers
 
             return Ok(new
             {
+                FirstName = user.FirstName,
                 userGoalsGuide = userDashboard.UserGoalsGuide,
                 MacroTargets = userDashboard.MacroTargets,
                 MicroGuide = userDashboard.MicroGuide,

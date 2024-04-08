@@ -7,5 +7,8 @@ namespace MealGeniusBackend.Models
         public string? FirstName { get; set; }
         public DateTime? EmailConfirmedAt { get; set; }
 
+        public DateTime? ConfirmationEmailSentAt { get; set; }
+
+
     }
 }

@@ -18,6 +18,7 @@ using MealGeniusBackend.Services.Dashboard;
 using MealGeniusBackend.Services.Auth;
 using MealGeniusBackend.Services.RabbitMQ;
 using MealGeniusBackend.Models;
+using MealGeniusBackend.Middleware;
 
 public class Startup
 {
@@ -59,6 +60,7 @@ public class Startup
 
             // Database Context Configuration
             var connectionString = Environment.GetEnvironmentVariable("MEALGENIUS_CONNECTIONSTRING");
+            //var connectionString = "Host=mealgeniusdb-server.postgres.database.azure.com;Database=mainadmin1234;Username=mainadmin1234;Password=REDACTED";
             services.AddDbContext<UserDbContext>(options => options.UseNpgsql(connectionString));
 
             // Logging Configuration
@@ -74,7 +76,7 @@ public class Startup
                 .AddMailGunSender(
                 Configuration["Mailgun:Domain"],
                 Configuration["Mailgun:ApiKey"]
- );
+                );
 
             // Application Services Registration
             RegisterApplicationServices(services);
@@ -110,6 +112,7 @@ public class Startup
             {
                 app.UseHttpsRedirection(); // Redirect HTTP to HTTPS.
             }
+
 
             // Middleware Configuration
             app.UseDefaultFiles();

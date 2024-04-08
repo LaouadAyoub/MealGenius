@@ -125,7 +125,7 @@ namespace MealGeniusBackend.Services
                         using (var image = SixLabors.ImageSharp.Image.Load(imageStream))
                         {
                             // Resize the image if you want to change its dimensions
-                            image.Mutate(x => x.Resize(512, 512));
+                            //image.Mutate(x => x.Resize(512, 512));
 
                             // Choose an appropriate encoder for your image format, here we use JPEG
                             var encoder = new SixLabors.ImageSharp.Formats.Jpeg.JpegEncoder
@@ -160,9 +160,9 @@ namespace MealGeniusBackend.Services
                                 {
                                     HttpHeaders = headers,
                                     Metadata = new Dictionary<string, string>
-                                {
-                                    { "Name", imageName }
-                                }
+                                    {
+                                        { "Name", imageName }
+                                    }
                                 });
 
                                 _logger.LogInformation("Image uploaded successfully to {BlobUri}", blobClient.Uri);

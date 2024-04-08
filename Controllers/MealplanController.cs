@@ -1,4 +1,5 @@
 ﻿using MealGeniusBackend.DataAcess;
+using MealGeniusBackend.Mapper;
 using MealGeniusBackend.Models;
 using MealGeniusBackend.Services.Dashboard;
 using MealGeniusBackend.Utilities;
@@ -48,6 +49,14 @@ namespace MealGeniusBackend.Controllers
             }
 
             var userMealPlan = JsonConvert.DeserializeObject<UserMealsRoot>(latestMealPlan.MealPlanJson);
+            List<aMealWithoutRecipe> mappedMeals = new List<aMealWithoutRecipe>();
+
+            foreach (var meal in userMealPlan.UserMeals)
+            {
+                meal.Recipe = "";
+
+            }
+
             // Include the username with the meal plan
             var response = new
             {
@@ -82,7 +91,7 @@ namespace MealGeniusBackend.Controllers
 
             var userGroceryListJson = JsonConvert.DeserializeObject<GroceryCategoriesDetailed>(userGroceryList.GroceryListJson);
 
-            //var groceryItems = _dbcontext.GroceryItems.ToList();
+            //var groceryItems = _dbContext.GroceryItems.ToList();
             //foreach (var category in userGroceryListJson.GroceryCategories)
             //{
             //    foreach(var item in category.GroceryItems)

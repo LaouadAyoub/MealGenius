@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using MealGeniusBackend.DataAcess;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MealGeniusBackend.Migrations
 {
     [DbContext(typeof(UserDbContext))]
-    partial class UserDbContextModelSnapshot : ModelSnapshot
+    [Migration("20240403154747_AddFeedbackConfiguration")]
+    partial class AddFeedbackConfiguration
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -179,36 +182,6 @@ namespace MealGeniusBackend.Migrations
                     b.HasKey("GroceryItemId");
 
                     b.ToTable("NotFoundGroceryItems", (string)null);
-                });
-
-            modelBuilder.Entity("MealGeniusBackend.DataAcess.PaymentRegistrationTable", b =>
-                {
-                    b.Property<string>("PaymentID")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Country")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("PaymentAmount")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("PaymentCurrency")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("PaymentDate")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("PaymentID");
-
-                    b.ToTable("PaymentRegistrations");
                 });
 
             modelBuilder.Entity("MealGeniusBackend.DataAcess.UserDashboard", b =>

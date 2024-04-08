@@ -33,10 +33,13 @@ namespace MealGeniusBackend.Services.Dashboard
         }
         public async Task GenerateMealsImages(UserTaskDTO userTaskDTO)
         {
+
             var userTask = _dbContext.Tasks.Where(u => u.Id == userTaskDTO.Id).FirstOrDefault();
 
             try
             {
+                userTask.MealsImagesGenerationExcecutedAt = DateTime.UtcNow;
+                await _dbContext.SaveChangesAsync();
                 // Logic for generating a user dashboard
                 var userInput = _dbContext.UserInputs
                               .Where(u => u.TaskId == userTaskDTO.Id)
@@ -79,7 +82,7 @@ namespace MealGeniusBackend.Services.Dashboard
                     return;
                 }
                 userTask.MealsImagesStatus = UserMealsImagesStatus.Ongoing;
-                _dbContext.SaveChanges();
+                await _dbContext.SaveChangesAsync();
 
                 //Image Narrative Generation
                 string systemPromptImageGeneration = $@"You are an AI assistant for MealGenius, an app designed for personalized nutrition and meal planning.
@@ -131,29 +134,12 @@ namespace MealGeniusBackend.Services.Dashboard
                     for (int j = i; j < i + maxParallelTasks && j < userMeals.Count; j++)
                     {
                         var meal = userMeals[j];
-                        tasks.Add(GenerateMealsImages(meal, UserInputsJson, chatImageNarrativeGenerationResponse));
+                        tasks.Add(GenerateAndUploadMealsImages(meal, UserInputsJson, chatImageNarrativeGenerationResponse));
                     }
 
                     await Task.WhenAll(tasks);
                 }
                 timer.StopAndLog();
-                #region Old Code
-                //var tasks = new List<Task>();
-
-                //foreach (var meal in theUserMealsRoot.UserMeals)
-                //{
-                //    if (tasks.Count >= maxParallelTasks)
-                //    {
-                //        // Attendre que toutes les tâches dans le lot actuel soient terminées
-                //        await Task.WhenAll(tasks);
-                //        tasks.Clear(); // Effacer la liste des tâches pour le prochain lot
-                //    }
-
-                //    // Ajouter la tâche de remplissage des données de repas à la liste
-                //    tasks.Add(GenerateMealsImages(meal, UserInputsJson, chatImageNarrativeGenerationResponse));
-                //}
-                #endregion
-
                 string mealPlanJson = JsonConvert.SerializeObject(theUserMealsRoot);
 
 
@@ -168,7 +154,7 @@ namespace MealGeniusBackend.Services.Dashboard
                     userTask.MealsImagesStatus = UserMealsImagesStatus.Completed;
                     _logger.LogInformation($"All meal images were generated successfully");
                     existingMealPlan.MealsImagesVersion += 1;
-                    _dbContext.SaveChanges();
+                    await _dbContext.SaveChangesAsync();
                     return;
                 }
             }
@@ -177,11 +163,13 @@ namespace MealGeniusBackend.Services.Dashboard
             {
                 _logger.LogError(ex, "Error while generating Meals images");
                 userTask.MealsImagesStatus = UserMealsImagesStatus.Failed;
-                _dbContext.SaveChanges();
+                userTask.Status = UserTaskStatus.Failed;
+                await _dbContext.SaveChangesAsync();   
+                throw;
             }
         }
 
-        async Task GenerateMealsImages(aMeal aMeal, string userData, string userImageNarrative)
+        async Task GenerateAndUploadMealsImages(aMeal aMeal, string userData, string userImageNarrative)
         {
             try
             {
@@ -207,10 +195,7 @@ namespace MealGeniusBackend.Services.Dashboard
                 string userPromptImageGeneration = $@"
             Generate a detailed prompt for DALL·E 3 to create an image of a meal. This image should be based on the provided descriptive narrative, ensuring consistency in mood, style, and environment. 
             Additionally, incorporate specific details from the given recipe. 
-            The prompt should blend these elements to guide the creation of an image that represents the meal accurately while adhering to the overall aesthetic theme.
 
-            Please find the narrative below:
-            {userImageNarrative}
 
             Here is the name of the meal : {aMeal.mealRecipeBreakdown.NameOfTheMeal}
             Please find the ingredients of the meal below:
@@ -222,6 +207,10 @@ namespace MealGeniusBackend.Services.Dashboard
             Please find Find the recipe of the meal below:
             {mealRecipeBuilder}
 
+            The prompt should blend these elements to guide the creation of an image that represents the meal accurately while adhering to the overall aesthetic theme.
+
+            Please find the narrative below:
+            {userImageNarrative}
 
             Please acknowledge the whole recipe and the ingredients in the prompt so you can generate the image accordingly of how the Final meal should look like.
             Ensure the prompt doesnt exceed 3500 caracters.
