@@ -63,6 +63,8 @@ public class Startup
             //var connectionString = "Host=mealgeniusdb-server.postgres.database.azure.com;Database=mainadmin1234;Username=mainadmin1234;Password=REDACTED";
             services.AddDbContext<UserDbContext>(options => options.UseNpgsql(connectionString));
 
+
+
             // Logging Configuration
             services.AddLogging(loggingBuilder =>
             {
@@ -149,6 +151,8 @@ public class Startup
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IEmailService, EmailService>();
+        services.AddScoped<IExecuteTaskService, ExecuteTaskService>();
+
 
         // Hosted services
         services.AddHostedService<RabbitMQConsumerHostedService>();
@@ -162,8 +166,13 @@ public class Startup
     private void ConfigureAuthentication(IServiceCollection services)
     {
         services.AddIdentity<ApplicationUser, IdentityRole>(options =>
-        {
-            options.SignIn.RequireConfirmedAccount = false; // Changed to false to accept non-confirmed accounts
+        {   
+            options.SignIn.RequireConfirmedAccount = true; // Changed to false to accept non-confirmed accounts
+            options.Password.RequireDigit = true;
+            options.Password.RequiredLength = 6;
+            options.Password.RequireNonAlphanumeric = false; // No need for non-alphanumeric characters
+            options.Password.RequireUppercase = false; // No need for uppercase letters
+            options.Password.RequireLowercase = false; // No need for lowercase letters
         })  
         .AddEntityFrameworkStores<UserDbContext>()
         .AddDefaultTokenProviders();

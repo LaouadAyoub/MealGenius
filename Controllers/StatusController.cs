@@ -101,6 +101,8 @@ namespace MealGeniusBackend.Controllers
         
             TimeSpan GroceryListTimeDifference = TimeSpan.FromSeconds(60 * 4) - (DateTime.Now - userTask.CreatedAt);
             versionInfo.GroceryListWaitingTime = FormatTimeSpanAsString(GroceryListTimeDifference > TimeSpan.Zero ? GroceryListTimeDifference : TimeSpan.FromSeconds(5));
+
+
             versionInfo.DashboardWaitingTime = "45 sec";
 
             if (userTask != null && userTask.DashboardsGenerationExcecutedAt.HasValue)

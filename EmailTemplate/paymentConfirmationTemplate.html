@@ -2,39 +2,38 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Background Image Example</title>
+    <title>Password Reset</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun');
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans&display=swap');
 
         body, html {
-            height: 100%; /* This ensures the body takes the full height of the HTML document */
-            margin: 0; /* Remove default margin */
-            padding: 0; /* Remove default padding */
-            overflow-x: hidden; /* Prevent horizontal scrolling */
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
         }
 
         body {
             background-image: url('https://mealgenius1.blob.core.windows.net/meal-genius-illustrations/BetterChoiceLessDistraction.png');
-            background-size: cover; /* Cover the entire page */
-            background-position: center; /* Center the background image */
-            background-repeat: no-repeat; /* Do not repeat the image */
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
         }
 
         .container {
             width: 75%;
             height: 75%;
             background-color: #ffffff;
-            border-radius: 32px; /* Adjust this value to match the Figma design */
+            border-radius: 32px;
             padding: 40px;
             margin: 40px auto;
             border: 4px solid #000000;
-            box-sizing: border-box;
-            box-shadow: 0 7px 0 0 rgba(0, 0, 0, 1); /* Adjust the color and opacity as needed */
+            box-shadow: 0 7px 0 0 rgba(0, 0, 0, 1);
         }
 
         .email-container {
-            font-family: 'Plus Jakarta Sans', sans-serif; /* Default font for the content */
+            font-family: 'Plus Jakarta Sans', sans-serif;
             padding: auto;
             margin: auto;
             text-align: center;
@@ -47,40 +46,39 @@
             .email-container .header h1,
             .email-container .content h1 {
                 font-family: 'Sarabun', sans-serif;
-                font-weight: 400; /* Sarabun extra bold */
+                font-weight: 400;
             }
 
             .email-container .content p {
                 font-family: 'Sarabun', sans-serif;
-                font-weight: 400; /* Sarabun extra bold */
+                font-weight: 400;
                 font-size: 20px;
             }
 
-
             .email-container .footer {
-                font-family: 'Plus Jakarta Sans', sans-serif; /* Plus Jakarta Sans for the body content */
+                font-family: 'Plus Jakarta Sans', sans-serif;
                 color: #1D283B;
                 font-size: 12px;
-                font-weight: 400; /* Regular weight */
+                font-weight: 400;
                 font-style: italic;
                 margin-top: 40px;
             }
 
-        .confirm-button {
+        .reset-button {
             display: inline-block;
             margin-top: 0px;
             padding: 10px 20px;
             text-decoration: none;
             color: #1D283B;
-            background-color: #F6DDD0; /* example button color, adjust as needed */
+            background-color: #F6DDD0;
             border-color: #1D283B;
             border: 1px solid #1D283B;
             border-radius: 5px;
             font-weight: bold;
-            font-family: 'plus jakarta sans';
+            font-family: 'Plus Jakarta Sans';
             font-size: 18px;
-            box-shadow: 0 4px 0 0 rgba(0, 0, 0, 1); /* Adjust the color and opacity as needed */
-            border-radius: 70px; /* Adjust this value to match the Figma design */
+            box-shadow: 0 4px 0 0 rgba(0, 0, 0, 1);
+            border-radius: 70px;
         }
 
         .logo img {
@@ -100,15 +98,12 @@
             justify-content: center; /* Center children horizontally as well */
         }
 
-        /* Ensures that the .container scales responsively */
         @media (max-width: 768px) {
             .container {
-                width: 95%; /* Take up 100% of the viewport width */
-                height: 75%; /* Take up 100% of the viewport height */
-                padding: 40px 20px; /* Add some padding to the sides */
+                width: 95%;
+                height: auto;
+                padding: 40px 20px;
                 margin: 40px auto;
-                border-radius: 32px; /* Adjust this value to match the Figma design */
-                box-sizing: border-box; /* Include padding and border in the element's size */
             }
 
             .logo img {
@@ -117,19 +112,15 @@
             }
 
             .email-container .content p {
-                font-family: 'Sarabun', sans-serif;
-                font-weight: 400; /* Sarabun extra bold */
                 font-size: 14px;
             }
         }
 
-        /* Dark mode styles */
         @media (prefers-color-scheme: dark) {
-            .confirm-button {
-                background-color: #FECC56; /* Darker background color for the button */
-                color:  #FFFFFF; /* Light text color for the button */
+            .reset-button {
+                background-color: #F6DDD0;
             }
-}
+        }
     </style>
 </head>
 <body>
@@ -144,16 +135,22 @@
             <div class="content">
                 <h1>Hello <strong>{Name}</strong>,</h1>
                 <div class="custom-div">
-                <p>Thank you for choosing MealGenius! Please <strong>confirm your email</strong>  to setup your password and  step into your custom kitchen and <strong>start the journey towards personalized nutrition</strong>.</p>
+                    <p>Thank you for your <strong>contribution</strong> to MealGenius! Your support is helping us make a difference. We're pleased to confirm your payment for your <strong>MealGenius space.</strong></p>
                 </div>
-                <a href="{confirmationLink}" class="confirm-button">Confirm your Email</a>
+                <div class="custom-div">
+                <p> Please <strong>click the button below</strong> to complete the setup of your account</p>
+                </div>
+                <a href="{paymentConfirmationLink}" class="reset-button">Access my dashboard</a>
                 <p>If the button above does not work, copy and paste the following link into your browser:</p>
-                <a>{confirmationLink}</a>
-            <p><strong></strong> dashboard of delights <strong>—nutritional guides, groceries, and delicious meals—</strong> is ready and waiting.</p>
+                <a>{paymentConfirmationLink}</a>
+
+                <!--<p>If you have any questions or concerns regarding this transaction, please feel free to <a href="{SupportLink}">contact our support team</a>.</p>-->
             </div>
 
             <div class="footer">
-                MealGenius, by Adhdoers Inc.<br>
+                MealGenius, by ADHDdoers Inc.<br>
+                <!--<a href="{SupportLink}">Contact Support</a><br>-->
+                <!--If you did not authorize this payment, please contact us immediately.-->
             </div>
         </div>
     </div>

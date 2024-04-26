@@ -14,6 +14,9 @@ namespace MealGeniusBackend.Models
         [JsonProperty("otherSexeDetails")]
         public string? OtherSexeDetails { get; set; }
 
+        [JsonProperty("activityLevel")]
+        public string ActivityLevel { get; set; }
+
 
         [JsonProperty("weight")]
         public string Weight { get; set; }
@@ -24,8 +27,7 @@ namespace MealGeniusBackend.Models
         [JsonProperty("heightUnit")]
         public string HeightUnit { get; set; }
 
-        [JsonProperty("activityLevel")]
-        public string ActivityLevel { get; set; }
+
 
 
         [JsonProperty("mainGoals")]
@@ -97,7 +99,7 @@ namespace MealGeniusBackend.Models
         public string? TemperatureUnit { get; set; }
 
         [JsonProperty("email")]
-        public string? Email { get; set; }
+        public string Email { get; set; }
     }
 
     public class FavoriteDish

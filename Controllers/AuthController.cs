@@ -11,6 +11,7 @@ using System.Security.Claims;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using MealGeniusBackend.Services.RabbitMQ;
+using Polly;
 
 namespace MealGeniusBackend.Controllers
 {
@@ -42,6 +43,39 @@ namespace MealGeniusBackend.Controllers
             _userService = userService;
             _dbcontext = dbcontext;
             _signInManager = signInManager;
+        }   
+
+        [HttpPost("LoginEmail")]
+        public async Task<IActionResult> LoginEmail(LoginEmailDto loginEmailDto)
+        {
+            var loginEmailOutput = new LoginEmailOut();
+
+            var user = await _userManager.FindByEmailAsync(loginEmailDto.EmailOrUsername);
+            if (user == null)
+            {
+                loginEmailOutput.Message = "Email not found.";
+                loginEmailOutput.Status = UserStatus.UserNotFound;
+                return NotFound(loginEmailOutput);
+            }
+
+            loginEmailOutput.Message = "Login successful";
+            loginEmailOutput.Status = UserStatus.Active;
+            loginEmailOutput.Email = user.Email;
+            return Ok(loginEmailOutput);
+        }
+
+        public class LoginEmailOut
+        {
+            public string Message { get; set; }
+            public UserStatus Status { get; set; }
+
+            public string Email { get; set; }
+        }
+
+        public enum UserStatus
+        {
+            Active,
+            UserNotFound,     
         }
 
         [HttpPost("Login")]
@@ -55,15 +89,15 @@ namespace MealGeniusBackend.Controllers
 
             // Regular expression for validating an email address
             string emailRegexPattern = @"^[^@\s]+@[^@\s]+\.[^@\s]+$";
-            bool isEmail = Regex.IsMatch(userLoginDto.Username, emailRegexPattern);
+            bool isEmail = Regex.IsMatch(userLoginDto.Email, emailRegexPattern);
 
             if (isEmail)
             {
-                user = await _userManager.FindByEmailAsync(userLoginDto.Username);
+                user = await _userManager.FindByEmailAsync(userLoginDto.Email);
             }
             else
             {
-                user = await _userManager.FindByNameAsync(userLoginDto.Username);
+                user = await _userManager.FindByNameAsync(userLoginDto.Email);
             }
             //if user is not found
             if (user == null)
@@ -208,8 +242,6 @@ namespace MealGeniusBackend.Controllers
                     return StatusCode(StatusCodes.Status401Unauthorized, output); // 401 for token expired
                 }
 
-
-
                 // Check if the user has set a password
                 output.isPasswordSet = await _userManager.HasPasswordAsync(user);
 
@@ -262,10 +294,6 @@ namespace MealGeniusBackend.Controllers
                     return Ok(output);
                 }
 
-
-
-
-
                 var confirmResult = await _userManager.ConfirmEmailAsync(user, model.Token);
                 if (!confirmResult.Succeeded)
                 {
@@ -279,18 +307,19 @@ namespace MealGeniusBackend.Controllers
                     }
                     return BadRequest(output);
                 }
+                //TODO : Old code to be deleted
                 // execute user task if it's not already done :
                 // Retrieve the latest UserTask and check if its status is new for the user
-                var userTask = await _dbcontext.Tasks
-                    .Where(ut => ut.UserId == user.Id)
-                    .OrderByDescending(ut => ut.CreatedAt)
-                    .FirstOrDefaultAsync();
-                if(userTask.Status == UserTaskStatus.NotStarted)
-                {
-                    string userTaskMessage = JsonConvert.SerializeObject(userTask);
-                    _rabbitMQService.PublishMessageInTaskQueue(userTaskMessage);
-                    _logger.LogInformation("Email confirmed for user with ID: {UserId} and task message published to queue.", user.Id);
-                }
+                //var userTask = await _dbcontext.Tasks
+                //    .Where(ut => ut.UserId == user.Id)
+                //    .OrderByDescending(ut => ut.CreatedAt)
+                //    .FirstOrDefaultAsync();
+                //if(userTask.Status == UserTaskStatus.NotStarted)
+                //{
+                //    string userTaskMessage = JsonConvert.SerializeObject(userTask);
+                //    _rabbitMQService.PublishMessageInTaskQueue(userTaskMessage);
+                //    _logger.LogInformation("Email confirmed for user with ID: {UserId} and task message published to queue.", user.Id);
+                //}
 
                 // Assuming your User entity has a property named EmailConfirmedAt
                 user.EmailConfirmedAt = DateTime.UtcNow;
@@ -313,8 +342,10 @@ namespace MealGeniusBackend.Controllers
 
         private async Task<bool> IsTokenExpired(string userId, string token)
         {
+            // where TokenType is the enum value for email confirmation TokenType.EmailConfirmation
+            
             var tokenEntry = await _dbcontext.ConfirmationTokens
-                .Where(t => t.UserId == userId && t.Token == token)
+                .Where(t => t.UserId == userId && t.Token == token && t.TokenType == TokenType.EmailConfirmation)
                 .SingleOrDefaultAsync();
 
             if (tokenEntry == null)
@@ -322,7 +353,7 @@ namespace MealGeniusBackend.Controllers
                 return true; // Token not found, treat as expired or invalid
             }
 
-            var expiryPeriod = TimeSpan.FromHours(48); // Example: 24 hours
+            var expiryPeriod = TimeSpan.FromHours(72); // Example: 24 hours
             return DateTime.UtcNow - tokenEntry.IssuedAt > expiryPeriod;
         }
 
@@ -352,6 +383,61 @@ namespace MealGeniusBackend.Controllers
 
 
         [HttpPost]
+        [Route("ForgotPassword")]
+        public async Task<IActionResult> ForgotPassword([FromBody] string email)
+        {
+            var user = await _userManager.FindByEmailAsync(email);
+
+            if (user == null)
+            {
+                return BadRequest("User not found.");
+            }
+
+            // send email check
+            await _emailService.SendPasswordResetEmail(user);
+
+            return Ok(new { Message = "Email sent successfully" });
+        }
+
+
+
+
+        [HttpPost("ConfirmAccess")]
+        public async Task<IActionResult> ConfirmAccess([FromBody] ConfirmAccessModel model)
+        {
+            if (model == null || string.IsNullOrWhiteSpace(model.Token))
+                return BadRequest("Invalid request.");
+
+
+            // where TokenType is the enum value for email confirmation TokenType.PasswordReset
+            var tokenEntry = await _dbcontext.ConfirmationTokens
+                .Where(t => t.Token == model.Token && t.TokenType == TokenType.ConfirmAccess && t.IssuedAt > DateTime.UtcNow.AddHours(-3)) // assuming 3 hour token validity
+                .FirstOrDefaultAsync();
+
+            if (tokenEntry == null)
+            {
+                return BadRequest("Invalid or expired token.");
+            }
+
+            // Find the user by ID obtained from the token
+            var user = await _userManager.FindByIdAsync(tokenEntry.UserId);
+            if (user == null)
+            {
+                return BadRequest("User not found.");
+            }
+
+
+            // Optionally, remove the token from the database to prevent reuse
+            _dbcontext.ConfirmationTokens.Remove(tokenEntry);
+            await _dbcontext.SaveChangesAsync();
+
+            //login user 
+            var token = await _authService.GenerateToken(user);
+            SetAuthTokenCookie(token);
+
+            return Ok("Access granted");
+        }
+        [HttpPost]
         [Route("SetupPassword")]
         public async Task<IActionResult> SetupPassword([FromBody] PasswordSetupModel model)
         {
@@ -366,9 +452,66 @@ namespace MealGeniusBackend.Controllers
             {
                 return BadRequest(new { ErrorMessage = setPasswordResult.Errors.FirstOrDefault()?.Description ?? "Failed to set password, please try again !"});
             }
-
-            return Ok(new { Message = "Password setup successful" });
+            var email = user.Email;
+            return Ok(new 
+                    {   Message = "Password setup successful",
+                        Email = email
+                    });
         }
+
+
+
+        [HttpPost("ResetPassword")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordModel model)
+        {
+            if (model == null || string.IsNullOrWhiteSpace(model.Token))
+                return BadRequest("Invalid request.");
+
+            // Check if the token is valid and find the corresponding user ID
+
+            // where TokenType is the enum value for email confirmation TokenType.PasswordReset
+            var tokenEntry = await _dbcontext.ConfirmationTokens
+                .Where(t => t.Token == model.Token && t.TokenType == TokenType.PasswordReset && t.IssuedAt > DateTime.UtcNow.AddHours(-1)) // assuming 1 hour token validity
+                .FirstOrDefaultAsync();
+
+            if (tokenEntry == null)
+            {
+                return BadRequest("Invalid or expired token.");
+            }
+
+            // Find the user by ID obtained from the token
+            var user = await _userManager.FindByIdAsync(tokenEntry.UserId);
+            if (user == null)
+            {
+                return BadRequest("User not found.");
+            }
+
+            // If using ASP.NET Core Identity, ResetPasswordAsync isn't suitable here because it expects a token generated by Identity
+            // Here we directly change the password since we manage the token ourselves
+            var removePasswordResult = await _userManager.RemovePasswordAsync(user);
+            if (!removePasswordResult.Succeeded)
+            {
+                return BadRequest("Failed to reset password.");
+            }
+
+            var addPasswordResult = await _userManager.AddPasswordAsync(user, model.Password);
+            if (!addPasswordResult.Succeeded)
+            {
+                return BadRequest(addPasswordResult.Errors);
+            }
+
+            // Optionally, remove the token from the database to prevent reuse
+            _dbcontext.ConfirmationTokens.Remove(tokenEntry);
+            await _dbcontext.SaveChangesAsync();
+
+            //login user 
+            var token = await _authService.GenerateToken(user);
+            SetAuthTokenCookie(token);
+
+            return Ok("Password has been reset successfully.");
+        }
+
+        public record ResetPasswordModel(string Token, string Password);
 
         [HttpPost]
         [Route("SetupUsername")]
@@ -439,25 +582,15 @@ namespace MealGeniusBackend.Controllers
             return Ok(new { Message = "Account setup and login successful" });
         }
 
-        public class AccountSetupModel
-        {
-            public string UserId { get; set; }
-            public string Username { get; set; }
-            public string Password { get; set; }
-        }
-        public class PasswordSetupModel
-        {
-            public string UserId { get; set; }
-            public string Password { get; set; }
-        }
-        public class UsernameSetupModel
-        {
-            public string UserId { get; set; }
-            public string Username { get; set; }
-        }
+        public record ForgotPasswordModel(string Email);
 
+        public record AccountSetupModel(string UserId, string Username, string Password);
 
+        public record PasswordSetupModel(string UserId, string Password);
 
+        public record ConfirmAccessModel(string Token);
+
+        public record UsernameSetupModel(string UserId, string Username);
     }
 
 

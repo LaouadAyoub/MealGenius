@@ -132,10 +132,19 @@ namespace MealGeniusBackend.DataAcess
         public string UserId { get; set; }
         public string Token { get; set; }
         public DateTime IssuedAt { get; set; }
+
+        // add an enum that represents the type of the token 1 for email confirmation 2 for password reset
+        public TokenType TokenType { get; set; }
     }
 
 
-    public class PaymentRegistrationTable
+    public enum TokenType
+    {
+        EmailConfirmation,
+        PasswordReset,
+        ConfirmAccess
+    }
+public class PaymentRegistrationTable
     {
         public string Email { get; set; }
         [Key]

@@ -108,33 +108,33 @@ namespace MealGeniusBackend.Services.RabbitMQ
                         // Generate the dashboard
                         var timer = new ServiceTaskTimer("RabbitMQService", "Start the generation");
                         timer.Start();
-                        //await PollyPolicies.AnyExceptionRetryPolicy.ExecuteAsync(async () =>
-                        //{
-                        //    await userDashboardService.GenerateUserDashboard(userTaskDTO);
-                        //});
-                        //await PollyPolicies.AnyExceptionRetryPolicy.ExecuteAsync(async () =>
-                        //{
-                        //    await mealPlanService.GenerateMealPlan(userTaskDTO);
-                        //});
-                        //// Assuming this is already set up to run tasks in parallel
-                        //await Task.WhenAll(
-                        //    RunWithNewScope(async scope =>
-                        //    {
-                        //        var groceryListService = scope.ServiceProvider.GetRequiredService<IGroceryListService>();
-                        //        await PollyPolicies.AnyExceptionRetryPolicy.ExecuteAsync(async () =>
-                        //        {
-                        //            await groceryListService.GenerateGroceryList(userTaskDTO);
-                        //        });
-                        //    }),
-                        //    RunWithNewScope(async scope =>
-                        //    {
-                        //        var mealsImagesService = scope.ServiceProvider.GetRequiredService<IMealsImagesService>();
-                        //        await PollyPolicies.AnyExceptionRetryPolicy.ExecuteAsync(async () =>
-                        //        {
-                        //            await mealsImagesService.GenerateMealsImages(userTaskDTO);
-                        //        });
-                        //    })
-                        //);
+                        await PollyPolicies.AnyExceptionRetryPolicy.ExecuteAsync(async () =>
+                        {
+                            await userDashboardService.GenerateUserDashboard(userTaskDTO);
+                        });
+                        await PollyPolicies.AnyExceptionRetryPolicy.ExecuteAsync(async () =>
+                        {
+                            await mealPlanService.GenerateMealPlan(userTaskDTO);
+                        });
+                        // Assuming this is already set up to run tasks in parallel
+                        await Task.WhenAll(
+                            RunWithNewScope(async scope =>
+                            {
+                                var groceryListService = scope.ServiceProvider.GetRequiredService<IGroceryListService>();
+                                await PollyPolicies.AnyExceptionRetryPolicy.ExecuteAsync(async () =>
+                                {
+                                    await groceryListService.GenerateGroceryList(userTaskDTO);
+                                });
+                            }),
+                            RunWithNewScope(async scope =>
+                            {
+                                var mealsImagesService = scope.ServiceProvider.GetRequiredService<IMealsImagesService>();
+                                await PollyPolicies.AnyExceptionRetryPolicy.ExecuteAsync(async () =>
+                                {
+                                    await mealsImagesService.GenerateMealsImages(userTaskDTO);
+                                });
+                            })
+                        );
 
                         _logger.LogInformation($"RabbitMQ Service : Processed message successfully: {message}");
                         timer.StopAndLog();
