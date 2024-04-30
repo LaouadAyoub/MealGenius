@@ -40,12 +40,28 @@ namespace MealGeniusBackend.Services.Auth
             return (result, user);
         }
 
+        public async Task<ApplicationUser?> GetUserByIdAsync(string userId)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            return user;
+        }
+        public async Task<ApplicationUser?> GetUserByEmailAsync(string email)
+        {
+            var user = await _userManager.FindByEmailAsync(email);
+            return user;
+        }
+
     }
 
     public interface IUserService
     {
+        Task<ApplicationUser> GetUserByIdAsync(string userId);
+
         Task<(IdentityResult Result, ApplicationUser User)> CreateUserAsync(string email, string userName = "");
 
         Task<(IdentityResult Result, ApplicationUser User)> CreateUserAsync(string email, string userName, string password);
+
+        Task<ApplicationUser?> GetUserByEmailAsync(string email);
+
     }
 }

@@ -2,6 +2,7 @@
 using MealGeniusBackend.Services;
 using MealGeniusBackend.Services.Auth;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.Tokens;
 using Stripe;
 
 namespace MealGeniusBackend.Controllers
@@ -10,7 +11,6 @@ namespace MealGeniusBackend.Controllers
     [ApiController]
     public class StripeWebhookController : Controller
     {
-        private readonly string endpointSecret;
         private readonly IEmailService _emailService;
         private readonly IUserService _userService; // You might need user service to fetch user data if required
         private readonly ILogger<StripeWebhookController> _logger; // Ensure ILogger is injected
@@ -22,13 +22,22 @@ namespace MealGeniusBackend.Controllers
             _userService = userService;
             _logger = logger;
             _executeTaskService = executeTaskService;
-            endpointSecret = configuration.GetSection("EndpointSecret").Value!;
         }
 
         [HttpPost("webhook")]
         public async Task<IActionResult> Handle()
         {
             var json = await new StreamReader(HttpContext.Request.Body).ReadToEndAsync();
+
+            var endpointSecret = Environment.GetEnvironmentVariable("EndpointSecret");
+
+            if (endpointSecret.IsNullOrEmpty())
+            {
+                endpointSecret = "REDACTED";
+                _logger.LogWarning("endpoint Secret is null !!!!!!!!!!");
+            }
+
+
             _logger.LogInformation($"I am inside the handle of the webhook");
             try
             {
@@ -41,10 +50,41 @@ namespace MealGeniusBackend.Controllers
 
                 if (stripeEvent.Type == Events.CheckoutSessionCompleted)
                 {
+                    string customerEmail;
                     var session = stripeEvent.Data.Object as Stripe.Checkout.Session;
                     if (session.PaymentStatus == "paid")
                     {
-                        var customerEmail = session.CustomerDetails.Email; // Assuming email is collected
+                        customerEmail = session.CustomerDetails.Email; // Assuming email is collected
+
+                        var clientReferenceId = session.ClientReferenceId;
+                        if (!clientReferenceId.IsNullOrEmpty())
+                        {
+                            var user = await _userService.GetUserByIdAsync(clientReferenceId);
+                            if (user != null)
+                            {
+                                user.PaymentConfirmed = true;
+                                customerEmail = user.Email!;
+                            }
+                            else
+                            {
+                                _logger.LogInformation($"User with id {clientReferenceId} not found.");
+                                
+                                var userByEmail = await _userService.GetUserByEmailAsync(customerEmail);
+                                if (userByEmail != null)
+                                {
+                                    userByEmail.PaymentConfirmed = true;
+                                }
+                                else
+                                { 
+                                    // if the user is not found by id or email, you can create a new user here
+                                    var (result, newUser) = await _userService.CreateUserAsync(customerEmail);
+                                    if (result.Succeeded)
+                                    {
+                                        newUser.PaymentConfirmed = true;
+                                    }
+                                }
+                            }
+                        }
                         if (!string.IsNullOrEmpty(customerEmail))
                         {
                             // Send payment confirmation email

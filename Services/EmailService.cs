@@ -151,12 +151,12 @@ namespace MealGeniusBackend.Services
             catch (FileNotFoundException ex)
             {
                 _logger.LogError(ex, "Email template file not found.");
-                throw new InvalidOperationException("The email confirmation process failed due to a missing template.", ex);
+                throw new InvalidOperationException("The email payment confirmation process failed due to a missing template.", ex);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to send confirmation email.");
-                throw new InvalidOperationException("An unexpected error occurred while sending the confirmation email.", ex);
+                throw new InvalidOperationException("An unexpected error occurred while sending the Payment confirmation email.", ex);
             }
         }
 

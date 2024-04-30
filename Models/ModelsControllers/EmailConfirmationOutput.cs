@@ -13,13 +13,14 @@
 
         public bool isPasswordSet { get; set; }
 
-        public bool isUsernameSet { get; set; }
+        //public bool isUsernameSet { get; set; }
 
         // Public method to set ConfirmedAt
         public void SetConfirmedAt(DateTime confirmedAtTime)
         {
             ConfirmedAt = confirmedAtTime;
         }
+
     }
 
 }

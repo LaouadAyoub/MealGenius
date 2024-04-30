@@ -12,6 +12,8 @@ using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using MealGeniusBackend.Services.RabbitMQ;
 using Polly;
+using MealGeniusBackend.Models.AuthControllerRecords;
+using MealGeniusBackend.Models.Enums;
 
 namespace MealGeniusBackend.Controllers
 {
@@ -64,19 +66,31 @@ namespace MealGeniusBackend.Controllers
             return Ok(loginEmailOutput);
         }
 
-        public class LoginEmailOut
-        {
-            public string Message { get; set; }
-            public UserStatus Status { get; set; }
 
-            public string Email { get; set; }
+        [HttpPost("Logout")]
+        public IActionResult Logout()
+        {
+            var cookieOptions = new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true, // Assuming your production is HTTPS
+                SameSite = SameSiteMode.Lax,
+            };
+            var isProduction_str = Environment.GetEnvironmentVariable("IsProduction");
+
+            // convert string to bool 
+            bool isProduction = isProduction_str == "true" ? true : false;
+
+            if (isProduction)
+            {
+                cookieOptions.Domain = ".mealgenius.ai";
+            }
+            Response.Cookies.Delete("AuthToken", cookieOptions);
+
+            return Ok(new { message = "Logged out successfully" });
         }
 
-        public enum UserStatus
-        {
-            Active,
-            UserNotFound,     
-        }
+
 
         [HttpPost("Login")]
         public async Task<IActionResult> Login(UserLoginDto userLoginDto)
@@ -141,8 +155,6 @@ namespace MealGeniusBackend.Controllers
                 return BadRequest(loginOutput);
             }
 
-            // Check if the username is set (assuming it's not set to the email by default)
-            loginOutput.IsUsernameSet = !string.IsNullOrWhiteSpace(user.UserName) && user.UserName != user.Email;
 
             // Check password validity
             if (!await _userManager.CheckPasswordAsync(user, userLoginDto.Password))
@@ -151,8 +163,6 @@ namespace MealGeniusBackend.Controllers
                 return Unauthorized(new { loginOutput.Message });
 
             }
-            // User is successfully logged in
-            loginOutput.IsLoginSuccess = true;
             loginOutput.Message = "You have successfully logged in !";
             loginOutput.Email = user.Email;
             var token = await _authService.GenerateToken(user);
@@ -162,16 +172,9 @@ namespace MealGeniusBackend.Controllers
         }
 
 
-        public class LoginOutput
-        {
-            public bool IsLoginSuccess { get; set; }
-            public string Message { get; set; }
-            public bool IsEmailConfirmed { get; set; }
-            public string Email { get; set; }
-            public bool IsPasswordSet { get; set; }
-            public bool IsUsernameSet { get; set; }
-        }
 
+
+        #region login-google
         //[HttpGet("GoogleLogin")]
         //public IActionResult GoogleLogin(string returnUrl = "/")
         //{
@@ -216,7 +219,7 @@ namespace MealGeniusBackend.Controllers
         //        }
         //    }
         //}
-
+        #endregion
 
 
         [HttpPost("ConfirmEmail")]
@@ -245,11 +248,9 @@ namespace MealGeniusBackend.Controllers
                 // Check if the user has set a password
                 output.isPasswordSet = await _userManager.HasPasswordAsync(user);
 
-                // Check if the username is set
-                output.isUsernameSet = !string.IsNullOrWhiteSpace(user.UserName) && user.UserName != user.Email;
 
                 // if user exist and has password and username, we log in the user
-                if (output.isPasswordSet && output.isUsernameSet)
+                if (output.isPasswordSet)
                 {
                     var token = await _authService.GenerateToken(user);
                     SetAuthTokenCookie(token);
@@ -257,7 +258,6 @@ namespace MealGeniusBackend.Controllers
                     output.isConfirmed = user.EmailConfirmed;
                     output.SetConfirmedAt(user.EmailConfirmedAt ?? default(DateTime)); // or some other default value
                     output.Email = user.Email!;
-                    output.isUsernameSet = true;
                     output.isPasswordSet = true;
 
                     return Ok(output);
@@ -268,18 +268,7 @@ namespace MealGeniusBackend.Controllers
                     output.isConfirmed = user.EmailConfirmed;
                     output.SetConfirmedAt(user.EmailConfirmedAt ?? default(DateTime)); // or some other default value
                     output.Email = user.Email;
-                    output.isUsernameSet = false;
                     output.isPasswordSet = true;
-                    return Ok(output);
-                }
-                if(output.isUsernameSet)
-                {
-                    output.Message = "User exist but no password is set. Please set up a password.";
-                    output.isConfirmed = user.EmailConfirmed;
-                    output.SetConfirmedAt(user.EmailConfirmedAt ?? default(DateTime)); // or some other default value
-                    output.Email = user.Email;
-                    output.isUsernameSet = true;
-                    output.isPasswordSet = false;
                     return Ok(output);
                 }
                 // Check if the email is already verified
@@ -307,21 +296,8 @@ namespace MealGeniusBackend.Controllers
                     }
                     return BadRequest(output);
                 }
-                //TODO : Old code to be deleted
-                // execute user task if it's not already done :
-                // Retrieve the latest UserTask and check if its status is new for the user
-                //var userTask = await _dbcontext.Tasks
-                //    .Where(ut => ut.UserId == user.Id)
-                //    .OrderByDescending(ut => ut.CreatedAt)
-                //    .FirstOrDefaultAsync();
-                //if(userTask.Status == UserTaskStatus.NotStarted)
-                //{
-                //    string userTaskMessage = JsonConvert.SerializeObject(userTask);
-                //    _rabbitMQService.PublishMessageInTaskQueue(userTaskMessage);
-                //    _logger.LogInformation("Email confirmed for user with ID: {UserId} and task message published to queue.", user.Id);
-                //}
 
-                // Assuming your User entity has a property named EmailConfirmedAt
+
                 user.EmailConfirmedAt = DateTime.UtcNow;
                 await _userManager.UpdateAsync(user); // Save the change to the database
                 output.Message = "Email confirmed.";
@@ -363,8 +339,8 @@ namespace MealGeniusBackend.Controllers
             {
                 HttpOnly = true,
                 Secure = true, // Adjust based on environment
-                SameSite = SameSiteMode.None,
-                Expires = DateTime.UtcNow.AddDays(1),
+                SameSite = SameSiteMode.Lax,
+                Expires = DateTime.UtcNow.AddDays(2),
             };
             var isProduction_str = Environment.GetEnvironmentVariable("IsProduction");
 
@@ -373,10 +349,8 @@ namespace MealGeniusBackend.Controllers
 
             if (isProduction)
             {
-                cookieOptions.Domain = ".mealgenius.guru";
+                cookieOptions.Domain = ".mealgenius.ai";
             }
-
-
 
             Response.Cookies.Append("AuthToken", token, cookieOptions);
         }
@@ -581,16 +555,6 @@ namespace MealGeniusBackend.Controllers
 
             return Ok(new { Message = "Account setup and login successful" });
         }
-
-        public record ForgotPasswordModel(string Email);
-
-        public record AccountSetupModel(string UserId, string Username, string Password);
-
-        public record PasswordSetupModel(string UserId, string Password);
-
-        public record ConfirmAccessModel(string Token);
-
-        public record UsernameSetupModel(string UserId, string Username);
     }
 
 

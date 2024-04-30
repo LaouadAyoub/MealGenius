@@ -14,8 +14,8 @@
         public string Name { get; set; }
         public string Age { get; set; }
         public string SexOrGender { get; set; }
-        public double Weight { get; set; }
-        public double Height { get; set; }
+        public string Weight { get; set; }
+        public string Height { get; set; }
         public string WeightUnit { get; set; }
         public string HeightUnit { get; set; }
         public string ActivityLevel { get; set; }

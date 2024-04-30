@@ -96,14 +96,15 @@ namespace MealGeniusBackend.Controllers
                 return NotFound("User Task not found");
             }
             versionInfo.UserName = user.UserName;
-            TimeSpan MealplanTimeDifference = TimeSpan.FromSeconds(60 * 3) - (DateTime.Now - userTask.CreatedAt);
-            versionInfo.MealplanWaitingTime = FormatTimeSpanAsString(MealplanTimeDifference > TimeSpan.Zero ? MealplanTimeDifference : TimeSpan.FromSeconds(5));
-        
-            TimeSpan GroceryListTimeDifference = TimeSpan.FromSeconds(60 * 4) - (DateTime.Now - userTask.CreatedAt);
-            versionInfo.GroceryListWaitingTime = FormatTimeSpanAsString(GroceryListTimeDifference > TimeSpan.Zero ? GroceryListTimeDifference : TimeSpan.FromSeconds(5));
+            //TimeSpan MealplanTimeDifference = TimeSpan.FromSeconds(60 * 3) - (DateTime.Now - userTask.CreatedAt);
+            //versionInfo.MealplanWaitingTime = FormatTimeSpanAsString(MealplanTimeDifference > TimeSpan.Zero ? MealplanTimeDifference : TimeSpan.FromSeconds(5));
 
+            //TimeSpan GroceryListTimeDifference = TimeSpan.FromSeconds(60 * 4) - (DateTime.Now - userTask.CreatedAt);
+            //versionInfo.GroceryListWaitingTime = FormatTimeSpanAsString(GroceryListTimeDifference > TimeSpan.Zero ? GroceryListTimeDifference : TimeSpan.FromSeconds(5));
 
-            versionInfo.DashboardWaitingTime = "45 sec";
+            versionInfo.MealplanWaitingTime = "~ 4 minutes";
+            versionInfo.GroceryListWaitingTime = "~ 5 minutes";
+            versionInfo.DashboardWaitingTime = "~ 45 secondes";
 
             if (userTask != null && userTask.DashboardsGenerationExcecutedAt.HasValue)
             {
