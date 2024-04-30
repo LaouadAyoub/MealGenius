@@ -62,19 +62,5 @@ namespace MealGeniusBackend.Mapper
 
             return combinedList;
         }
-
-                private static double ConvertHeightToInches(string height)
-        {
-            if (string.IsNullOrEmpty(height))
-                return 0;
-                
-            var parts = height.Split('\'');
-            if (parts.Length != 2 || !int.TryParse(parts[0], out int feet) || !int.TryParse(parts[1].Replace("\"", "").Trim(), out int inches))
-            {
-                throw new FormatException("Height format is not correct. Expected format: X'Y\"");
-            }
-            return feet * 12 + inches; // Convert feet to inches and add the inches
-        }
-
     }
 }
