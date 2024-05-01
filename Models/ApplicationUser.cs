@@ -10,5 +10,7 @@ namespace MealGeniusBackend.Models
         public DateTime? ConfirmationEmailSentAt { get; set; }
 
         public bool PaymentConfirmed { get; set; }
+
+        public DateTime? PaymentConfirmedAt { get; set; }
     }
 }

@@ -64,6 +64,7 @@ namespace MealGeniusBackend.Controllers
                             if (user != null)
                             {
                                 user.PaymentConfirmed = true;
+                                user.PaymentConfirmedAt = DateTime.UtcNow;
                                 customerEmail = user.Email!;
                             }
                             else
@@ -74,6 +75,7 @@ namespace MealGeniusBackend.Controllers
                                 if (userByEmail != null)
                                 {
                                     userByEmail.PaymentConfirmed = true;
+                                    userByEmail.PaymentConfirmedAt = DateTime.UtcNow;
                                 }
                                 else
                                 { 
@@ -82,6 +84,7 @@ namespace MealGeniusBackend.Controllers
                                     if (result.Succeeded)
                                     {
                                         newUser.PaymentConfirmed = true;
+                                        newUser.PaymentConfirmedAt = DateTime.UtcNow;
                                     }
                                 }
                             }
