@@ -205,7 +205,8 @@ public class PaymentRegistrationTable
         NotStarted,
         Ongoing,
         Completed,
-        Failed
+        Failed,
+        TobeRetried
     }
 
     public enum UserOutputStatus

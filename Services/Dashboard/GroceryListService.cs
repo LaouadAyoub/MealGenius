@@ -65,7 +65,17 @@ namespace MealGeniusBackend.Services.Dashboard
 
                 if (!existingMealPlan.GroceryListJson.IsNullOrEmpty())
                 {
-                    return;
+                    if (userTaskDTO.Status == UserTaskStatus.TobeRetried)
+                    {
+                        //_dbContext.UserDashboards.Remove(existingDashboard);
+                        existingMealPlan.GroceryListJson = "";
+                        await _dbContext.SaveChangesAsync();
+                    }
+                    else
+                    {
+                        _logger.LogInformation("GroceryList already exists for this task");
+                        return;
+                    }
                 }
 
                 //Deserialize the meal plan json

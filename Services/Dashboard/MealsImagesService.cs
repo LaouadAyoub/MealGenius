@@ -77,10 +77,10 @@ namespace MealGeniusBackend.Services.Dashboard
                 }
 
                 // TODO had ligne khessni n7eidha
-                if (userTask.MealsImagesStatus is UserMealsImagesStatus.Completed)
-                {
-                    return;
-                }
+                //if (userTask.MealsImagesStatus is UserMealsImagesStatus.Completed)
+                //{
+                //    return;
+                //}
                 userTask.MealsImagesStatus = UserMealsImagesStatus.Ongoing;
                 await _dbContext.SaveChangesAsync();
 

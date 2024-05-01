@@ -52,7 +52,16 @@ namespace MealGeniusBackend.Services.Dashboard
 
                 if (existingDashboard != null)
                 {
-                    return;
+                    if(userTaskDTO.Status == UserTaskStatus.TobeRetried)
+                    {
+                        _dbContext.UserDashboards.Remove(existingDashboard);
+                        await _dbContext.SaveChangesAsync();
+                    }
+                    else
+                    {
+                        _logger.LogInformation("Dashboard already exists for this task");
+                        return;
+                    }
                 }
                 var timer = new ServiceTaskTimer("UserDashboardService", "Start the generation of the dashboard");
                 timer.Start();

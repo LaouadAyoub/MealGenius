@@ -16,15 +16,15 @@
         public string SexOrGender { get; set; }
         public string Weight { get; set; }
         public string Height { get; set; }
-        public string WeightUnit { get; set; }
-        public string HeightUnit { get; set; }
+        //public string WeightUnit { get; set; }
+        //public string HeightUnit { get; set; }
         public string ActivityLevel { get; set; }
     }
 
     public class UserNutritionalGoals
     {
         public List<string> Goals { get; set; }
-        public double TargetWeight { get; set; }
+        public string TargetWeight { get; set; }
         public string PaceOfWeightChange { get; set; }
         public List<string> DietaryRestrictionsBasedOnFoodSource { get; set; }
 
@@ -47,7 +47,7 @@
         public string MeasurementForLiquids { get; set; }
         public string MeasurementForTemperature { get; set; }
 
-        public string MeasurementForWeightUnit { get; set; }
+        public string MeasurementForWeightUnitForIngredients { get; set; }
 
     }
 

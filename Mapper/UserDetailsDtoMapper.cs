@@ -13,16 +13,14 @@ namespace MealGeniusBackend.Mapper
                     Name = userProfile.Name,
                     Age = userProfile.Age,
                     SexOrGender = (userProfile.Sexe== "Other") ? userProfile.OtherSexeDetails : userProfile.Sexe,
-                    Weight = userProfile.Weight,
-                    Height = userProfile.Height,
-                    WeightUnit = userProfile.WeightUnit,
-                    HeightUnit = userProfile.HeightUnit,
+                    Weight = userProfile.Weight + userProfile.WeightUnit,
+                    Height = userProfile.Height + userProfile.HeightUnit,
                     ActivityLevel = userProfile.ActivityLevel,
                 },
                 NutritionalGoals = new UserNutritionalGoals
                 {
                     Goals = CombineLists(userProfile.MainGoals, userProfile.OtherMainGoals),
-                    TargetWeight = Convert.ToDouble(userProfile.WeightGoal),
+                    TargetWeight = userProfile.WeightGoal + userProfile.WeightGoalUnit,
                     PaceOfWeightChange = userProfile.Pace,
                     DietaryRestrictionsBasedOnFoodSource = CombineLists(userProfile.DietaryPreferences, userProfile.OtherDietaryPreferences),
                     DietaryRestrictionsBasedOnMacroNutritients = CombineLists(userProfile.DietaryPreferencesMacros, userProfile.OtherDietaryPreferencesMacros),
@@ -40,7 +38,7 @@ namespace MealGeniusBackend.Mapper
                     MealPreparationStyle = userProfile.ServingPreference,
                     MeasurementForLiquids = userProfile.LiquidUnit,
                     MeasurementForTemperature = userProfile.TemperatureUnit,
-                    MeasurementForWeightUnit = userProfile.WeightUnit
+                    MeasurementForWeightUnitForIngredients = userProfile.IngredientsWeightUnit
                 }
             };
 

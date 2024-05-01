@@ -98,6 +98,9 @@ namespace MealGeniusBackend.Models
         [JsonProperty("temperatureUnit")]
         public string? TemperatureUnit { get; set; }
 
+        [JsonProperty("ingredientsWeightUnit")]
+        public string? IngredientsWeightUnit { get; set; }
+
         [JsonProperty("email")]
         public string Email { get; set; }
     }

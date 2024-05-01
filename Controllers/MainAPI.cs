@@ -279,5 +279,74 @@ namespace MealGeniusBackend.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, "An internal error occurred while executing the task.");
             }
         }
+
+        [Authorize]
+        [HttpGet("ReExecuteTask")]
+        public async Task<IActionResult> ReExecuteUserTask([FromBody] UserData userData)
+        {
+            try
+            {
+                //var username = "MoroccanCuisineLover";
+                // Get the current authenticated user
+                var user = await _userManager.FindByNameAsync(User?.Identity?.Name);
+                //var user = await _userManager.FindByNameAsync(username);
+                if (user == null)
+                {
+                    _logger.LogWarning("ExecuteUserTask: User not found or not authenticated.");
+                    return Unauthorized();
+                }
+
+                // Retrieve the latest UserTask and check if its status is new for the user
+                var userTask = await _dbcontext.Tasks
+                    .Where(ut => ut.UserId == user.Id)
+                    .OrderByDescending(ut => ut.CreatedAt)
+                    .FirstOrDefaultAsync();
+
+                // If the task does not exist, create a new one
+                if (userTask == null)
+                {
+                    userTask = new UserTask
+                    {
+                        UserId = user.Id,
+                        Status = UserTaskStatus.NotStarted,
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    await _dbcontext.Tasks.AddAsync(userTask);
+                    await _dbcontext.SaveChangesAsync();
+                    _logger.LogInformation("ExecuteUserTask: Created new task for user with ID: {UserId}", user.Id);
+                }
+                // Serialize the task and publish the message
+                var userTaskDTO = new UserTaskDTO
+                {
+                    Id = userTask.Id,
+                    UserId = userTask.UserId,
+                    Status = UserTaskStatus.TobeRetried
+                };
+
+                var userInputs = await _dbcontext.UserInputs.FirstOrDefaultAsync(u => u.UserId == user.Id);
+                //update userInputs
+                if (userInputs == null)
+                    return NotFound();
+
+                userInputs.UserData = JsonConvert.SerializeObject(userData);
+                userInputs.Task = userTask;
+                _dbcontext.UserInputs.Update(userInputs);
+                await _dbcontext.SaveChangesAsync();
+
+
+
+                string userTaskMessage = JsonConvert.SerializeObject(userTaskDTO);
+                _rabbitMQService.PublishMessageInTaskQueue(userTaskMessage);
+                _logger.LogInformation("ExecuteUserTask: Task with ID: {TaskId} has been executed for user with ID: {UserId}.", userTask.Id, user.Id);
+
+                return Ok($"The task with ID {userTask.Id} has been executed.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "ExecuteUserTask: An exception occurred");
+                return StatusCode(StatusCodes.Status500InternalServerError, "An internal error occurred while executing the task.");
+            }
+        }
+
     }
 }

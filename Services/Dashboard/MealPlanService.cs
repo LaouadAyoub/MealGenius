@@ -3,6 +3,7 @@ using MealGeniusBackend.DataAcess;
 using MealGeniusBackend.Helpers;
 using MealGeniusBackend.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
 using OpenAI_API;
 using Stripe;
@@ -60,10 +61,18 @@ namespace MealGeniusBackend.Services.Dashboard
 
                 var existingMealPlan = _dbContext.MealPlans.SingleOrDefault(mealPlan => mealPlan.TaskId == userTaskDTO.Id);
 
-                if (existingMealPlan is not null)
+                if (existingMealPlan is not null && !existingMealPlan.MealPlanJson.IsNullOrEmpty())
                 {
-                    _logger.LogInformation("MealPlan already exists");
-                    return;
+                    if (userTaskDTO.Status == UserTaskStatus.TobeRetried)
+                    {
+                        _dbContext.MealPlans.Remove(existingMealPlan);
+                        await _dbContext.SaveChangesAsync();
+                    }
+                    else
+                    {
+                        _logger.LogInformation("Mealplan already exists for this task");
+                        return;
+                    }
                 }
 
 
