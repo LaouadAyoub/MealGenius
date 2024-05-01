@@ -117,6 +117,7 @@ namespace MealGeniusBackend.Controllers
             if (user == null)
             {
                 loginOutput.Message = "User not found.";
+                loginOutput.Status = UserStatus.UserNotFound;
                 return NotFound(loginOutput);
             }
 
@@ -125,6 +126,7 @@ namespace MealGeniusBackend.Controllers
             {
                 loginOutput.Message = "User data not found, you can register again!";
                 loginOutput.Email = user.Email;
+                loginOutput.Status = UserStatus.UserNotFound;
                 //delete the user 
                 _dbcontext.Remove(user);
                 return NotFound(loginOutput);
@@ -135,24 +137,26 @@ namespace MealGeniusBackend.Controllers
             loginOutput.Email = user.Email;
 
             // Check if the user is confirmed
-            loginOutput.IsEmailConfirmed = await _userManager.IsEmailConfirmedAsync(user);
+            var isEmailConfirmed = await _userManager.IsEmailConfirmedAsync(user);
 
-            // if email is not confirmed, we resend email confirmation
-            //if (!loginOutput.IsEmailConfirmed)
-            //{
-
-            //    //await _emailService.SendEmailConfirmationAsync(user);
-            //    loginOutput.Message = "Email not confirmed. A new confirmation email has been sent.";
-            //    return BadRequest(loginOutput);
-            //}
+            if (!isEmailConfirmed)
+            {
+                loginOutput.Message = "Email not confirmed, please check your Email to confirm your account";
+                loginOutput.Status = UserStatus.AccountNotConfirmed;
+                // resend email confirmation
+                await _emailService.SendConfirmationEmail(user, user.FirstName ?? "");
+                return Ok(loginOutput);
+            }
 
             // Check if the user has a password set
-            loginOutput.IsPasswordSet = await _userManager.HasPasswordAsync(user);
+            var isPasswordSet = await _userManager.HasPasswordAsync(user);
 
-            if (!loginOutput.IsPasswordSet)
+            if (!isPasswordSet)
             {
-                loginOutput.Message = "User exists but no password is set. Please set up a password.";
-                return BadRequest(loginOutput);
+                loginOutput.Message = "Password not Set, please check your Email to reconfirm your account";
+                loginOutput.Status = UserStatus.AccountNotConfirmed;
+                loginOutput.Token = user.Id;
+                return Ok(loginOutput);
             }
 
 
@@ -160,8 +164,17 @@ namespace MealGeniusBackend.Controllers
             if (!await _userManager.CheckPasswordAsync(user, userLoginDto.Password))
             {
                 loginOutput.Message = "Invalid login attempt, wrong password, please try again";
-                return Unauthorized(new { loginOutput.Message });
-
+                loginOutput.Status = UserStatus.IncorrectPassword;
+                return Ok(loginOutput);
+            }
+            //check if the user has paid
+            var isPaymentConfirmed = user.PaymentConfirmed;
+            if (!isPaymentConfirmed)
+            {
+                loginOutput.Message = "Payment not confirmed, please make payment to continue";
+                loginOutput.Status = UserStatus.PaymentRequired;
+                loginOutput.Token = user.Id;
+                return Ok(loginOutput);
             }
             loginOutput.Message = "You have successfully logged in !";
             loginOutput.Email = user.Email;
@@ -240,42 +253,40 @@ namespace MealGeniusBackend.Controllers
                 {
                     output.Email = user.Email;
                     output.Message = "Token expired.";
-                    output.isConfirmed = false;
+                    output.Status = UserStatus.AccountNotConfirmed;
                     output.isExpired = true;
                     return StatusCode(StatusCodes.Status401Unauthorized, output); // 401 for token expired
                 }
 
                 // Check if the user has set a password
-                output.isPasswordSet = await _userManager.HasPasswordAsync(user);
+                var isPasswordSet = await _userManager.HasPasswordAsync(user);
+                var isConfirmed = user.EmailConfirmed;
 
 
                 // if user exist and has password and username, we log in the user
-                if (output.isPasswordSet)
+                if (isConfirmed && isPasswordSet)
                 {
+                    if (!user.PaymentConfirmed)
+                    {
+                        output.Message = "Your payment has not been confirmed";
+                        output.Status = UserStatus.PaymentRequired;
+                        output.Email = user.Email;
+                        output.Token = user.Id;
+                        return Ok(output);
+                    }
                     var token = await _authService.GenerateToken(user);
                     SetAuthTokenCookie(token);
                     output.Message = "User activated, Login successfull";
-                    output.isConfirmed = user.EmailConfirmed;
+                    output.Status = UserStatus.Active;
                     output.SetConfirmedAt(user.EmailConfirmedAt ?? default(DateTime)); // or some other default value
                     output.Email = user.Email!;
-                    output.isPasswordSet = true;
-
-                    return Ok(output);
-                }
-                if(output.isPasswordSet)
-                {
-                    output.Message = "User exist but no username is set. Please set up a username.";
-                    output.isConfirmed = user.EmailConfirmed;
-                    output.SetConfirmedAt(user.EmailConfirmedAt ?? default(DateTime)); // or some other default value
-                    output.Email = user.Email;
-                    output.isPasswordSet = true;
                     return Ok(output);
                 }
                 // Check if the email is already verified
-                if (user.EmailConfirmed)
+                else if (isConfirmed)
                 {
                     output.Email = user.Email;
-                    output.isConfirmed = true;
+                    output.Status = UserStatus.PasswordNotSet;
                     output.SetConfirmedAt(user.EmailConfirmedAt ?? default(DateTime)); // or some other default value
                     output.Message = "Email is already confirmed.";
                     output.isExpired = false;
@@ -288,7 +299,7 @@ namespace MealGeniusBackend.Controllers
                 {
                     _logger.LogWarning("Email confirmation failed for user with ID: {UserId}", model.UserId);
                     output.Message = confirmResult.Errors.FirstOrDefault()?.Description ?? "Error confirming email.";
-                    output.isConfirmed = false;
+                    output.Status = UserStatus.PasswordNotSet;
                     if(confirmResult.Errors.FirstOrDefault()?.Code == "InvalidToken")
                     {
                         output.Message = "Invalid token.";
@@ -301,7 +312,7 @@ namespace MealGeniusBackend.Controllers
                 user.EmailConfirmedAt = DateTime.UtcNow;
                 await _userManager.UpdateAsync(user); // Save the change to the database
                 output.Message = "Email confirmed.";
-                output.isConfirmed = true;
+                output.Status = UserStatus.PasswordNotSet;
                 output.SetConfirmedAt(DateTime.UtcNow); // You already have this
                 output.Email = user.Email;
 

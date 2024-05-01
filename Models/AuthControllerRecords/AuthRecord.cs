@@ -25,9 +25,10 @@ namespace MealGeniusBackend.Models.AuthControllerRecords
     {
         public string Email { get; set; }
         public string Message { get; set; }
-        public bool IsEmailConfirmed { get; set; }
-        //has the user paid or not?
-        public bool IsPaymentConfirmed { get; set; }
-        public bool IsPasswordSet { get; set; }
+
+        public UserStatus Status { get; set; }
+
+        public string Token { get; set; } = "";
+
     }
 }

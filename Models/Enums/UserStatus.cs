@@ -4,8 +4,9 @@
     {
         Active,
         UserNotFound,
-        IncorrectPassword,
+        PasswordNotSet,
         AccountNotConfirmed,
         PaymentRequired,
+        IncorrectPassword
     }
 }
