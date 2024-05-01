@@ -54,11 +54,15 @@
                 font-weight: 400;
                 font-size: 20px;
             }
-
+            .email-container .content a {
+                font-family: 'Sarabun', sans-serif;
+                font-weight: 400;
+                font-size: 20px;
+            }
             .email-container .footer {
                 font-family: 'Plus Jakarta Sans', sans-serif;
                 color: #1D283B;
-                font-size: 12px;
+                font-size: 14px;
                 font-weight: 400;
                 font-style: italic;
                 margin-top: 40px;
@@ -79,6 +83,11 @@
             font-size: 18px;
             box-shadow: 0 4px 0 0 rgba(0, 0, 0, 1);
             border-radius: 70px;
+        }
+        .reset-button a {
+            font-family: 'Sarabun', sans-serif;
+            font-weight: 500;
+            font-size: 22px;
         }
 
         .logo img {
@@ -135,23 +144,17 @@
             <div class="content">
                 <h1>Hello <strong>{Name}</strong>,</h1>
                 <div class="custom-div">
-                    <p>Thank you for your <strong>contribution</strong> to MealGenius! Your support is helping us make a difference. We're pleased to confirm your payment for your <strong>MealGenius space.</strong></p>
-                </div>
-                <div class="custom-div">
-                <p> Please <strong>click the button below</strong> to complete the setup of your account</p>
+                    <p>Thank you for your <strong>contribution</strong> to MealGenius! <br><strong>Your support</strong> is helping us make a difference.<br> We're pleased to confirm your payment for your <strong>MealGenius space.</strong></p>
                 </div>
                 <a href="{paymentConfirmationLink}" class="reset-button">Access my dashboard</a>
-                <p>If the button above does not work, copy and paste the following link into your browser:</p>
+                <p>📧 If you have any issues, please contact us:</p>
+                <a href="mailto:redacted@example.invalid">redacted@example.invalid</a>
+                <div class="footer">
+                    MealGenius, by Adhdoers.<br>
+                </div>
+                <p><br><br>If the button above does not work, copy and paste the following link into your browser:</p>
                 <a>{paymentConfirmationLink}</a>
-
-                <!--<p>If you have any questions or concerns regarding this transaction, please feel free to <a href="{SupportLink}">contact our support team</a>.</p>-->
-            </div>
-
-            <div class="footer">
-                MealGenius, by ADHDdoers Inc.<br>
-                <!--<a href="{SupportLink}">Contact Support</a><br>-->
-                <!--If you did not authorize this payment, please contact us immediately.-->
-            </div>
+           </div>
         </div>
     </div>
 

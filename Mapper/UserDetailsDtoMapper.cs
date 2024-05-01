@@ -13,8 +13,8 @@ namespace MealGeniusBackend.Mapper
                     Name = userProfile.Name,
                     Age = userProfile.Age,
                     SexOrGender = (userProfile.Sexe== "Other") ? userProfile.OtherSexeDetails : userProfile.Sexe,
-                    Weight = userProfile.Weight + userProfile.WeightUnit,
-                    Height = userProfile.Height + userProfile.HeightUnit,
+                    Weight = userProfile.Weight + " " + userProfile.WeightUnit,
+                    Height = userProfile.Height + " " + userProfile.HeightUnit,
                     ActivityLevel = userProfile.ActivityLevel,
                 },
                 NutritionalGoals = new UserNutritionalGoals

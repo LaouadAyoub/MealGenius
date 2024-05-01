@@ -33,6 +33,7 @@ namespace MealGeniusBackend.Controllers
 
             if (endpointSecret.IsNullOrEmpty())
             {
+                //REDACTED
                 endpointSecret = "REDACTED";
                 _logger.LogWarning("endpoint Secret is null !!!!!!!!!!");
             }

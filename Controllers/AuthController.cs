@@ -1,19 +1,16 @@
 ﻿using MealGeniusBackend.DataAcess;
 using MealGeniusBackend.Models;
+using MealGeniusBackend.Models.AuthControllerRecords;
+using MealGeniusBackend.Models.Enums;
 using MealGeniusBackend.Models.ModelsControllers;
 using MealGeniusBackend.Services;
 using MealGeniusBackend.Services.Auth;
+using MealGeniusBackend.Services.RabbitMQ;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using System.Security.Claims;
 using System.Text.RegularExpressions;
-using Newtonsoft.Json;
-using MealGeniusBackend.Services.RabbitMQ;
-using Polly;
-using MealGeniusBackend.Models.AuthControllerRecords;
-using MealGeniusBackend.Models.Enums;
 
 namespace MealGeniusBackend.Controllers
 {

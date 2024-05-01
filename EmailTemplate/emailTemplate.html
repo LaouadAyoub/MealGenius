@@ -55,12 +55,16 @@
                 font-weight: 400; /* Sarabun extra bold */
                 font-size: 20px;
             }
-
+            .email-container .content a {
+                font-family: 'Sarabun', sans-serif;
+                font-weight: 400; /* Sarabun extra bold */
+                font-size: 20px;
+            }
 
             .email-container .footer {
                 font-family: 'Plus Jakarta Sans', sans-serif; /* Plus Jakarta Sans for the body content */
                 color: #1D283B;
-                font-size: 12px;
+                font-size: 14px;
                 font-weight: 400; /* Regular weight */
                 font-style: italic;
                 margin-top: 40px;
@@ -72,15 +76,15 @@
             padding: 10px 20px;
             text-decoration: none;
             color: #1D283B;
-            background-color: #F6DDD0; /* example button color, adjust as needed */
+            background-color: #F6DDD0;
             border-color: #1D283B;
             border: 1px solid #1D283B;
             border-radius: 5px;
             font-weight: bold;
-            font-family: 'plus jakarta sans';
+            font-family: 'Plus Jakarta Sans';
             font-size: 18px;
-            box-shadow: 0 4px 0 0 rgba(0, 0, 0, 1); /* Adjust the color and opacity as needed */
-            border-radius: 70px; /* Adjust this value to match the Figma design */
+            box-shadow: 0 4px 0 0 rgba(0, 0, 0, 1);
+            border-radius: 70px;
         }
 
         .logo img {
@@ -135,6 +139,7 @@
 <body>
     <div class="container">
         <div class="email-container">
+
             <div class="header">
                 <div class="logo">
                     <img src="https://mealgenius1.blob.core.windows.net/meal-genius-illustrations/Illustration.png" alt="Meal Genius Mascot">
@@ -144,17 +149,18 @@
             <div class="content">
                 <h1>Hello <strong>{Name}</strong>,</h1>
                 <div class="custom-div">
-                <p>Thank you for choosing MealGenius! Please <strong>confirm your email</strong>  to setup your password and  step into your custom kitchen and <strong>start the journey towards personalized nutrition</strong>.</p>
+                    <p><strong>Thank you</strong> for choosing MealGenius! <br>Please <strong>confirm your email</strong>  to step into your custom kitchen and <strong>start the journey towards personalized nutrition</strong>.</p>
                 </div>
-                <a href="{confirmationLink}" class="confirm-button">Confirm your Email</a>
-                <p>If the button above does not work, copy and paste the following link into your browser:</p>
+                <a href="{confirmationLink}" class="confirm-button">Confirm my Email</a>
+                <p>📧 If you have any issues, please contact us:</p>
+                <a href="mailto:redacted@example.invalid">redacted@example.invalid</a>
+                <div class="footer">
+                    MealGenius, by Adhdoers.<br>
+                </div>
+                <p><br><br>If the button above does not work, copy and paste the following link into your browser:</p>
                 <a>{confirmationLink}</a>
-            <p><strong></strong> dashboard of delights <strong>—nutritional guides, groceries, and delicious meals—</strong> is ready and waiting.</p>
             </div>
 
-            <div class="footer">
-                MealGenius, by Adhdoers Inc.<br>
-            </div>
         </div>
     </div>
 
