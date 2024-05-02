@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Password Reset</title>
+    <title>Payment Confirmation</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun');
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans&display=swap');
@@ -15,8 +15,7 @@
         }
 
         body {
-            background-image: url('https://mealgenius1.blob.core.windows.net/meal-genius-illustrations/BetterChoiceLessDistraction.png');
-            background-size: cover;
+            background-image: url('https://mealgenius1.blob.core.windows.net/meal-genius-illustrations/BetterChoiceLessDistraction.png'); background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
         }
@@ -89,10 +88,9 @@
             font-weight: 500;
             font-size: 22px;
         }
-
         .logo img {
-            width: 12%;
-            height: 15%;
+            width: 20%;
+            height: 23%;
         }
 
         .custom-div {
@@ -137,24 +135,24 @@
         <div class="email-container">
             <div class="header">
                 <div class="logo">
-                    <img src="https://mealgenius1.blob.core.windows.net/meal-genius-illustrations/Illustration.png" alt="Meal Genius Mascot">
+                    <img src="https://mealgenius1.blob.core.windows.net/meal-genius-illustrations/brainschef-For-Emails.png" alt="Meal Genius Mascot">
                 </div>
             </div>
 
             <div class="content">
                 <h1>Hello <strong>{Name}</strong>,</h1>
                 <div class="custom-div">
-                    <p>Thank you for your <strong>contribution</strong> to MealGenius! <br><strong>Your support</strong> is helping us make a difference.<br> We're pleased to confirm your payment for your <strong>MealGenius space.</strong></p>
+                    <p>Thank you for your <strong>contribution</strong> to MealGenius! <br><strong>Your support</strong> is helping us make a difference.<br><strong>We're pleased </strong> to welcome you to your <strong>MealGenius space.</strong></p>
                 </div>
                 <a href="{paymentConfirmationLink}" class="reset-button">Access my dashboard</a>
-                <p>📧 If you have any issues, please contact us:</p>
+                <p>If you <strong>need help</strong> or want to share your feedback, please <strong>contact us</strong>:</p>
                 <a href="mailto:redacted@example.invalid">redacted@example.invalid</a>
                 <div class="footer">
                     MealGenius, by Adhdoers.<br>
                 </div>
                 <p><br><br>If the button above does not work, copy and paste the following link into your browser:</p>
                 <a>{paymentConfirmationLink}</a>
-           </div>
+            </div>
         </div>
     </div>
 

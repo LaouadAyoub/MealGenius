@@ -122,8 +122,9 @@ namespace MealGeniusBackend.Services.Dashboard
                     Note: Each filter category (Meal Type, Preparation Type, Mood Suitability) can have multiple options for a single meal to increase flexibility and user discoverability. For instance, a meal can be both a 'Breakfast' and a 'Smoothie', and suit moods like 'Energizing' and 'Refreshing'.
                     Ensure that the meals have common elements for users to explore related options and maintain a balance between creativity, dietary preferences, and culinary diversity.
 
-                    Based on the user data provided, create a JSON structure with 12 personalized meals. Ensure each meal aligns with the user’s preferences, health goals, and lifestyle, reflecting the diversity and balance necessary for their diet.
+                    Based on the user data provided, create a JSON structure with 12 wide range personalized meals. Ensure each meal aligns with the user’s preferences, health goals, and lifestyle, reflecting the diversity and balance necessary for their diet.
 
+                    Please propose a wise range of food.
                     Plz follow the format of the JSON file provided in the following line :
 
                     {MealRecipeBreakdow_JsonExample}";
