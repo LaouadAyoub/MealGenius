@@ -12,6 +12,7 @@
     public class UserDetails
     {
         public string Name { get; set; }
+        public string? Email { get; set; }
         public string Age { get; set; }
         public string SexOrGender { get; set; }
         public string Weight { get; set; }
@@ -23,9 +24,9 @@
 
     public class UserNutritionalGoals
     {
-        public List<string> Goals { get; set; }
-        public string TargetWeight { get; set; }
-        public string PaceOfWeightChange { get; set; }
+        public List<string> Goals { get; set; } 
+        public string? TargetWeight { get; set; }
+        public string? PaceOfWeightChange { get; set; }
         public List<string> DietaryRestrictionsBasedOnFoodSource { get; set; }
 
         public List<string> DietaryRestrictionsBasedOnMacroNutritients { get; set; }

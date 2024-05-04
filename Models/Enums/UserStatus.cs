@@ -7,6 +7,7 @@
         PasswordNotSet,
         AccountNotConfirmed,
         PaymentRequired,
-        IncorrectPassword
+        IncorrectPassword,
+        InputsbutNoDashboards
     }
 }

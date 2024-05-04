@@ -10,6 +10,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using MealGeniusBackend.Middleware;
+using Microsoft.IdentityModel.Tokens;
+using MealGeniusBackend.Models.AuthControllerRecords;
+using MealGeniusBackend.Models.Enums;
 
 namespace MealGeniusBackend.Controllers
 {
@@ -36,65 +39,207 @@ namespace MealGeniusBackend.Controllers
             _userService = userService;
             _logger = logger;
         }
-
         [HttpPost("RegisterUser")]
         public async Task<IActionResult> RegisterUser([FromBody] UserProfile inputData)
         {
             try
             {
+                var registerOut = new RegisterOut();
                 var UserData = DtoMapper.MapUserProfileToUserData(inputData);
-                var existingUser = await _dbcontext.Users.FirstOrDefaultAsync(u => u.Email == inputData.Email);
+                string serializedInputData = JsonConvert.SerializeObject(UserData);
+
+                // Check if the user already exists
+                var existingUser = await _userManager.FindByEmailAsync(inputData.Email);
                 if (existingUser != null)
                 {
-                    var existingUserTask = await _dbcontext.Tasks.FirstOrDefaultAsync(t => t.UserId == existingUser.Id);
-
-                    if (existingUserTask != null && existingUserTask.Status == UserTaskStatus.Completed )
+                    // Check existing user inputs
+                    var existingInputs = await _dbcontext.UserInputs.FirstOrDefaultAsync(input => input.UserId == existingUser.Id);
+                    if (existingInputs != null)
                     {
-                        return BadRequest("User already exists, please login");
-                    }
-                   
-                    if (existingUser.ConfirmationEmailSentAt.HasValue &&
-                        DateTime.UtcNow - existingUser.ConfirmationEmailSentAt.Value < TimeSpan.FromMinutes(3))
-                    {
-                        var timeLeft = TimeSpan.FromMinutes(2) - (DateTime.UtcNow - existingUser.ConfirmationEmailSentAt.Value);
-                        var roundedSeconds = 5 * Math.Ceiling(timeLeft.Seconds / 5.0); // Round up to the nearest multiple of 5
-
-                        var timeComponent = timeLeft.TotalMinutes >= 1 ?
-                            $"{timeLeft.Minutes} minutes and {roundedSeconds} seconds" :
-                            $"{roundedSeconds} seconds";
-
-                        var message = $"Email confirmation has been sent. Please check your inbox and other email folders, or you can retry to resend the email in {timeComponent}.";
-
-                        return BadRequest(new { message });
+                        return await HandleExistingUser(existingUser, existingInputs, serializedInputData, inputData);
                     }
 
-                    await ResendConfirmationEmail(existingUser, inputData.Name);
+                    // If no existing inputs, add new inputs
+                    var userInput = new UserInput
+                    {
+                        UserData = serializedInputData,
+                        UserId = existingUser.Id,
+                        Task = new UserTask
+                        {
+                            Id = Guid.NewGuid(),
+                            CreatedAt = DateTime.UtcNow,
+                            User = existingUser
+                        }
+                    };
+                    _dbcontext.UserInputs.Add(userInput);
+                    await _dbcontext.SaveChangesAsync();
+
+                    await SendConfirmationEmailAndUpdateTimestamp(existingUser, inputData.Name);
+                    registerOut.Message = "User exists already, your data has been updated, and the email confirmation has been resent. Please check your email.";
+                    registerOut.Status = UserStatus.AccountNotConfirmed;
+                    return Ok(registerOut);
+                }
+
+                // Create new user
+                return await CreateNewUser(inputData, serializedInputData);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred during the registration process.");
+                return StatusCode(500, "An internal error occurred. Please try again later.");
+            }
+        }
+        private async Task<IActionResult> HandleExistingUser(ApplicationUser existingUser, UserInput existingInputs, string serializedInputData, UserProfile inputData)
+        {
+            // Check for recent email confirmation attempt
+            if (existingUser.ConfirmationEmailSentAt.HasValue &&
+                DateTime.UtcNow - existingUser.ConfirmationEmailSentAt.Value < TimeSpan.FromMinutes(3))
+            {
+                var timeLeft = TimeSpan.FromMinutes(2) - (DateTime.UtcNow - existingUser.ConfirmationEmailSentAt.Value);
+                var roundedSeconds = 5 * Math.Ceiling(timeLeft.Seconds / 5.0); // Round up to the nearest multiple of 5
+
+                var timeComponent = timeLeft.TotalMinutes >= 1 ?
+                    $"{timeLeft.Minutes} minutes and {roundedSeconds} seconds" :
+                    $"{roundedSeconds} seconds";
+
+                var message = $"Email confirmation has been sent. Please check your inbox and other email folders, or you can retry to resend the email in {timeComponent}.";
+                return Ok(new RegisterOut
+                {
+                    Message = message,
+                    Status = UserStatus.AccountNotConfirmed,
+                    Email = inputData.Email
+                });
+            }
+
+            // Check if user data needs updating
+            if (existingInputs.UserData != serializedInputData)
+            {
+                existingInputs.UserData = serializedInputData;
+                _dbcontext.Update(existingInputs);
+                await _dbcontext.SaveChangesAsync();
+            }
+
+            // Resend confirmation email if necessary
+            await ResendConfirmationEmail(existingUser, inputData.Name);
+            return Ok(new RegisterOut
+            {
+                Message = "User exists already, your data has been updated, and the email confirmation has been resent. Please check your email.",
+                Status = UserStatus.InputsbutNoDashboards
+            });
+        }
+        private async Task<IActionResult> CreateNewUser(UserProfile inputData, string serializedInputData)
+        {
+            var createResult = await _userService.CreateUserAsync(inputData.Email, inputData.Name);
+            if (!createResult.Result.Succeeded)
+            {
+                return BadRequest(createResult.Result.Errors);
+            }
+
+            // Create user input data and associate with new user
+            var userInput = new UserInput
+            {
+                UserData = serializedInputData,
+                UserId = createResult.User.Id,
+                Task = new UserTask
+                {
+                    Id = Guid.NewGuid(),
+                    CreatedAt = DateTime.UtcNow,
+                    User = createResult.User
+                }
+            };
+            _dbcontext.UserInputs.Add(userInput);
+            await _dbcontext.SaveChangesAsync();
+
+            // Send email confirmation
+            await SendConfirmationEmailAndUpdateTimestamp(createResult.User, inputData.Name);
+            return Ok(new RegisterOut
+            {
+                Message = "Registration successful! Please check your email to confirm your account.",
+                Status = UserStatus.AccountNotConfirmed
+            });
+        }
+
+
+        [HttpPost("RegisterUserBackend")]
+        public async Task<IActionResult> RegisterUserBackend([FromBody] UserData inputData)
+        {
+            try
+            {
+
+                var existingUser = await _userManager.FindByEmailAsync(inputData.Details.Email);
+                string serializedInputData = JsonConvert.SerializeObject(inputData);
+                var userInput = new UserInput();
+
+                if (existingUser != null)
+                {
+                    var existingInputs = await _dbcontext.UserInputs.FirstOrDefaultAsync(input => input.UserId == existingUser.Id);
+                    if (existingInputs is not null && !existingInputs.UserData.IsNullOrEmpty())
+                    {
+
+                        var existingUserTask = await _dbcontext.Tasks.FirstOrDefaultAsync(t => t.UserId == existingUser.Id);
+
+                        if (existingUserTask != null && existingUserTask.Status == UserTaskStatus.Completed)
+                        {
+                            return BadRequest("User already exists, please login");
+                        }
+
+                        if (existingUser.ConfirmationEmailSentAt.HasValue &&
+                            DateTime.UtcNow - existingUser.ConfirmationEmailSentAt.Value < TimeSpan.FromMinutes(3))
+                        {
+                            var timeLeft = TimeSpan.FromMinutes(2) - (DateTime.UtcNow - existingUser.ConfirmationEmailSentAt.Value);
+                            var roundedSeconds = 5 * Math.Ceiling(timeLeft.Seconds / 5.0); // Round up to the nearest multiple of 5
+
+                            var timeComponent = timeLeft.TotalMinutes >= 1 ?
+                                $"{timeLeft.Minutes} minutes and {roundedSeconds} seconds" :
+                                $"{roundedSeconds} seconds";
+
+                            var message = $"Email confirmation has been sent. Please check your inbox and other email folders, or you can retry to resend the email in {timeComponent}.";
+
+                            return BadRequest(new { message });
+                        }
+                        var userHasDashboards = await _userService.UserHasDashboards(existingUser);
+                        if (!userHasDashboards)
+                        {
+                                existingInputs.UserData = serializedInputData;
+                                _dbcontext.Update(existingInputs);
+                                _dbcontext.SaveChanges();
+                        }
+
+                        await ResendConfirmationEmail(existingUser, inputData.Details.Email);
+                        return Ok(new { message = "Email confirmation has been resent. Please check your email." });
+                    }
+                    userInput.UserData = serializedInputData;
+                    userInput.UserId = existingUser.Id;
+                    userInput.Task = new UserTask
+                    {
+                        Id = Guid.NewGuid(),
+                        CreatedAt = DateTime.UtcNow,
+                        User = existingUser
+                    };
+                    _dbcontext.UserInputs.Add(userInput);
+                    await _dbcontext.SaveChangesAsync();
+                    await SendConfirmationEmailAndUpdateTimestamp(existingUser, inputData.Details.Name);
                     return Ok(new { message = "Email confirmation has been resent. Please check your email." });
                 }
 
-                var createResult = await _userService.CreateUserAsync(inputData.Email, inputData.Name);
+                var createResult = await _userService.CreateUserAsync(inputData.Details.Email, inputData.Details.Name);
                 if (!createResult.Result.Succeeded)
                 {
                     return BadRequest(createResult.Result.Errors);
                 }
 
-                string serializedInputData = JsonConvert.SerializeObject(UserData);
-                var userInput = new UserInput
+                userInput.UserData = serializedInputData;
+                userInput.UserId = createResult.User.Id;
+                userInput.Task = new UserTask
                 {
-                    UserData = serializedInputData,
-                    UserId = createResult.User.Id,
-                    Task = new UserTask
-                    {
-                        Id = Guid.NewGuid(),
-                        CreatedAt = DateTime.UtcNow,
-                        User = createResult.User
-                    }
+                    Id = Guid.NewGuid(),
+                    CreatedAt = DateTime.UtcNow,
+                    User = createResult.User
                 };
-
                 _dbcontext.UserInputs.Add(userInput);
                 await _dbcontext.SaveChangesAsync();
 
-                await SendConfirmationEmailAndUpdateTimestamp(createResult.User, inputData.Name);
+                await SendConfirmationEmailAndUpdateTimestamp(createResult.User, inputData.Details.Name);
 
                 return Ok("Registration successful! Please check your email to confirm your account.");
             }
@@ -104,6 +249,7 @@ namespace MealGeniusBackend.Controllers
                 return StatusCode(500, "An internal error occurred. Please try again later.");
             }
         }
+
 
         private async Task SendConfirmationEmailAndUpdateTimestamp(ApplicationUser user, string name)
         {

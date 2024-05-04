@@ -57,6 +57,22 @@ namespace MealGeniusBackend.Controllers
                 return NotFound(loginEmailOutput);
             }
 
+            // Check if the user has a password set
+            //var isPasswordSet = await _userManager.HasPasswordAsync(user);
+            //var isConfirmed = user.EmailConfirmed;
+            //if (!isPasswordSet)
+            //{
+            //    if (isConfirmed)
+            //    {
+            //        loginEmailOutput.Message = "Account confirmed but password not set";
+            //        loginEmailOutput.Status = UserStatus.PasswordNotSet;
+            //        loginEmailOutput.Token = user.Id;
+            //        return Ok(loginEmailOutput);
+            //    }
+            //}
+
+
+
             loginEmailOutput.Message = "Login successful";
             loginEmailOutput.Status = UserStatus.Active;
             loginEmailOutput.Email = user.Email;
@@ -151,7 +167,7 @@ namespace MealGeniusBackend.Controllers
             if (!isPasswordSet)
             {
                 loginOutput.Message = "Password not Set, please check your Email to reconfirm your account";
-                loginOutput.Status = UserStatus.AccountNotConfirmed;
+                loginOutput.Status = UserStatus.PasswordNotSet;
                 loginOutput.Token = user.Id;
                 return Ok(loginOutput);
             }
@@ -168,7 +184,7 @@ namespace MealGeniusBackend.Controllers
             var isPaymentConfirmed = user.PaymentConfirmed;
             if (!isPaymentConfirmed)
             {
-                loginOutput.Message = "Payment not confirmed, please make payment to continue";
+                loginOutput.Message = "🌟 Hey there! Looks like your payment needs a little nudge to complete. Let’s get you all set up! 🍽️";
                 loginOutput.Status = UserStatus.PaymentRequired;
                 loginOutput.Token = user.Id;
                 return Ok(loginOutput);
@@ -322,7 +338,28 @@ namespace MealGeniusBackend.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, output);
             }
         }
+        // confirmEmailBackend endpoint 
 
+        [HttpPost("ConfirmEmailbyEmail")]
+        public async Task<IActionResult> ConfirmEmailbyEmail([FromBody] EmailConfirmationByEmailModel model)
+        {
+            var user = await _userManager.FindByEmailAsync(model.email);
+            if (user == null)
+            {
+                return BadRequest("User not found.");
+            }
+
+            // Confirm the email
+            user.EmailConfirmed = true;
+            user.EmailConfirmedAt = DateTime.UtcNow;
+
+            await _userManager.UpdateAsync(user);
+
+            // Save changes to the database
+            await _dbcontext.SaveChangesAsync();
+
+            return Ok(new { Message = "Email confirmed successfully" });
+        }
 
         private async Task<bool> IsTokenExpired(string userId, string token)
         {
@@ -440,8 +477,28 @@ namespace MealGeniusBackend.Controllers
                         Email = email
                     });
         }
+        [HttpPost]
+        [Route("SetupPasswordByEmail")]
+        public async Task<IActionResult> SetupPasswordByEmail([FromBody] PasswordSetupByEmailModel model)
+        {
+            var user = await _userManager.FindByEmailAsync(model.Email);
+            if (user == null)
+            {
+                return BadRequest("User not found.");
+            }
 
-
+            var setPasswordResult = await _userManager.AddPasswordAsync(user, model.Password);
+            if (!setPasswordResult.Succeeded)
+            {
+                return BadRequest(new { ErrorMessage = setPasswordResult.Errors.FirstOrDefault()?.Description ?? "Failed to set password, please try again !" });
+            }
+            var email = user.Email;
+            return Ok(new
+            {
+                Message = "Password setup successful",
+                Email = email
+            });
+        }
 
         [HttpPost("ResetPassword")]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordModel model)

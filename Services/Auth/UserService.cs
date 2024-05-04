@@ -3,6 +3,8 @@ using MealGeniusBackend.DataAcess;
 using MealGeniusBackend.Models;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 
 namespace MealGeniusBackend.Services.Auth
 {
@@ -10,11 +12,13 @@ namespace MealGeniusBackend.Services.Auth
     {
         private readonly UserManager<ApplicationUser>  _userManager;
         private readonly IEmailService _emailService;
+        private readonly UserDbContext _dbcontext;
 
-        public UserService(UserManager<ApplicationUser>  userManager, IEmailService emailService)
+        public UserService(UserManager<ApplicationUser>  userManager, IEmailService emailService, UserDbContext dbcontext)
         {
             _userManager = userManager;
             _emailService = emailService;
+            _dbcontext = dbcontext;
         }
 
         // In UserService
@@ -51,6 +55,22 @@ namespace MealGeniusBackend.Services.Auth
             return user;
         }
 
+        public async Task<bool> UserHasDashboards(ApplicationUser User)
+        {
+
+            var existingMealPlan = await _dbcontext.MealPlans.FirstOrDefaultAsync(mealPlan => mealPlan.UserId == User.Id);
+            var existingDashboard = await  _dbcontext.UserDashboards.FirstOrDefaultAsync(dashboard => dashboard.UserId == User.Id);
+
+            if (existingDashboard is null && existingMealPlan is null)
+                return false;
+
+            if (existingMealPlan.MealPlanJson.IsNullOrEmpty() || existingMealPlan.GroceryListJson.IsNullOrEmpty())
+                return false;
+
+            return true;
+        
+        }
+
     }
 
     public interface IUserService
@@ -62,6 +82,9 @@ namespace MealGeniusBackend.Services.Auth
         Task<(IdentityResult Result, ApplicationUser User)> CreateUserAsync(string email, string userName, string password);
 
         Task<ApplicationUser?> GetUserByEmailAsync(string email);
+
+        Task<bool> UserHasDashboards(ApplicationUser User);
+
 
     }
 }
