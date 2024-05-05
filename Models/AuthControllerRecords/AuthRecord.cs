@@ -43,5 +43,7 @@ namespace MealGeniusBackend.Models.AuthControllerRecords
 
         public string Message { get; set; }
         public UserStatus Status { get; set; }
+        public string Token { get; set; } = "";
+
     }
 }

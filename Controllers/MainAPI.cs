@@ -56,6 +56,17 @@ namespace MealGeniusBackend.Controllers
                     var existingInputs = await _dbcontext.UserInputs.FirstOrDefaultAsync(input => input.UserId == existingUser.Id);
                     if (existingInputs != null)
                     {
+                        var userHasDashboards = await _userService.UserHasDashboards(existingUser);
+                        if (userHasDashboards)
+                        {
+                            return Ok(new RegisterOut
+                            {
+                                Message = "User already exists please try a new email adress or login",
+                                Status = UserStatus.Active,
+                                Email = inputData.Email
+                            });
+                        }
+
                         return await HandleExistingUser(existingUser, existingInputs, serializedInputData, inputData);
                     }
 
@@ -93,7 +104,7 @@ namespace MealGeniusBackend.Controllers
         {
             // Check for recent email confirmation attempt
             if (existingUser.ConfirmationEmailSentAt.HasValue &&
-                DateTime.UtcNow - existingUser.ConfirmationEmailSentAt.Value < TimeSpan.FromMinutes(3))
+                DateTime.UtcNow - existingUser.ConfirmationEmailSentAt.Value < TimeSpan.FromMinutes(2))
             {
                 var timeLeft = TimeSpan.FromMinutes(2) - (DateTime.UtcNow - existingUser.ConfirmationEmailSentAt.Value);
                 var roundedSeconds = 5 * Math.Ceiling(timeLeft.Seconds / 5.0); // Round up to the nearest multiple of 5

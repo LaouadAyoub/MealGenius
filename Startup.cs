@@ -125,8 +125,11 @@ public class Startup
             app.UseAuthorization();
 
             // Swagger Middleware Configuration
-            app.UseSwagger();
-            app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "MealGenius Swagger"));
+            if(env.IsDevelopment())
+            {
+                app.UseSwagger();
+                app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "MealGenius Swagger"));
+            }
 
             // Endpoint Configuration
             app.UseEndpoints(endpoints => endpoints.MapControllers());

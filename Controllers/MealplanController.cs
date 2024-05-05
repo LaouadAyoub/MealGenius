@@ -67,6 +67,38 @@ namespace MealGeniusBackend.Controllers
             return Ok(response);
         }
 
+
+        // update MealPlan
+        [HttpPost("UpdateMealPlan")]
+        public async Task<IActionResult> UpdateMealPlan([FromBody] UserMealsRoot mealPlanJson)
+        {
+            // Get the current authenticated user
+            var user = await _userManager.FindByNameAsync(User?.Identity?.Name);
+            if (user == null)
+            {
+                return Unauthorized();
+            }
+
+            var existingMealPlan = await _dbcontext.MealPlans
+                                  .Where(ud => ud.UserId == user.Id)
+                                  .OrderByDescending(m => m.CreatedAt)
+                                  .FirstOrDefaultAsync();
+            if (existingMealPlan == null)
+            {
+                return NotFound("Mealplan not found.");
+            }
+            var userNewMealPlan = JsonConvert.SerializeObject(mealPlanJson);
+
+            existingMealPlan.MealPlanJson = userNewMealPlan;
+            _dbcontext.MealPlans.Update(existingMealPlan);
+            await _dbcontext.SaveChangesAsync();
+
+            return Ok("Meal plan updated successfully.");
+        }
+
+
+
+
         [HttpGet("GetGroceryList")]
         public async Task<IActionResult> GetGroceryList()
         {
