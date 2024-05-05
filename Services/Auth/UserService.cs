@@ -24,10 +24,19 @@ namespace MealGeniusBackend.Services.Auth
         // In UserService
         public async Task<(IdentityResult Result, ApplicationUser User)> CreateUserAsync(string email, string userName, string password)
         {
-            var user = new ApplicationUser { Email = email, UserName = userName };
+            var user = new ApplicationUser
+            {
+                Email = email,
+                UserName = userName,
+                UserCreatedAt = DateTime.UtcNow // Setting the creation time when creating the user object
+            };
+
             var result = await _userManager.CreateAsync(user, password);
+
+            // No need to update and save again as the creation time is already set
             return (result, user);
         }
+
 
         public async Task<(IdentityResult Result, ApplicationUser User)> CreateUserAsync(string iEmail, string iFirstName = "")
         {
@@ -38,6 +47,7 @@ namespace MealGeniusBackend.Services.Auth
                 UserName = iEmail, // Temporarily set the UserName to the email address
                 EmailConfirmed = false, // This is default, explicitly setting it for clarity
                 FirstName = iFirstName,
+                UserCreatedAt = DateTime.UtcNow // Setting the creation time when creating the user object
             };
 
             var result = await _userManager.CreateAsync(user);

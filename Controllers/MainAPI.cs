@@ -61,7 +61,7 @@ namespace MealGeniusBackend.Controllers
                         {
                             return Ok(new RegisterOut
                             {
-                                Message = "User already exists please try a new email adress or login",
+                                Message = "User already exists please retry with a new email adress or login",
                                 Status = UserStatus.Active,
                                 Email = inputData.Email
                             });
@@ -85,9 +85,11 @@ namespace MealGeniusBackend.Controllers
                     _dbcontext.UserInputs.Add(userInput);
                     await _dbcontext.SaveChangesAsync();
 
-                    await SendConfirmationEmailAndUpdateTimestamp(existingUser, inputData.Name);
-                    registerOut.Message = "User exists already, your data has been updated, and the email confirmation has been resent. Please check your email.";
+                    //await SendConfirmationEmailAndUpdateTimestamp(existingUser, inputData.Name);
+                    registerOut.Message = "User exists already, your data has been updated";
                     registerOut.Status = UserStatus.AccountNotConfirmed;
+                    registerOut.Email = inputData.Email;
+                    registerOut.Token = existingUser.Id;
                     return Ok(registerOut);
                 }
 
@@ -102,25 +104,25 @@ namespace MealGeniusBackend.Controllers
         }
         private async Task<IActionResult> HandleExistingUser(ApplicationUser existingUser, UserInput existingInputs, string serializedInputData, UserProfile inputData)
         {
-            // Check for recent email confirmation attempt
-            if (existingUser.ConfirmationEmailSentAt.HasValue &&
-                DateTime.UtcNow - existingUser.ConfirmationEmailSentAt.Value < TimeSpan.FromMinutes(2))
-            {
-                var timeLeft = TimeSpan.FromMinutes(2) - (DateTime.UtcNow - existingUser.ConfirmationEmailSentAt.Value);
-                var roundedSeconds = 5 * Math.Ceiling(timeLeft.Seconds / 5.0); // Round up to the nearest multiple of 5
+            //// Check for recent email confirmation attempt
+            //if (existingUser.ConfirmationEmailSentAt.HasValue &&
+            //    DateTime.UtcNow - existingUser.ConfirmationEmailSentAt.Value < TimeSpan.FromMinutes(2))
+            //{
+            //    var timeLeft = TimeSpan.FromMinutes(2) - (DateTime.UtcNow - existingUser.ConfirmationEmailSentAt.Value);
+            //    var roundedSeconds = 5 * Math.Ceiling(timeLeft.Seconds / 5.0); // Round up to the nearest multiple of 5
 
-                var timeComponent = timeLeft.TotalMinutes >= 1 ?
-                    $"{timeLeft.Minutes} minutes and {roundedSeconds} seconds" :
-                    $"{roundedSeconds} seconds";
+            //    var timeComponent = timeLeft.TotalMinutes >= 1 ?
+            //        $"{timeLeft.Minutes} minutes and {roundedSeconds} seconds" :
+            //        $"{roundedSeconds} seconds";
 
-                var message = $"Email confirmation has been sent. Please check your inbox and other email folders, or you can retry to resend the email in {timeComponent}.";
-                return Ok(new RegisterOut
-                {
-                    Message = message,
-                    Status = UserStatus.AccountNotConfirmed,
-                    Email = inputData.Email
-                });
-            }
+            //    var message = $"Please retry in {timeComponent}.";
+            //    return Ok(new RegisterOut
+            //    {
+            //        Message = message,
+            //        Status = UserStatus.AccountNotConfirmed,
+            //        Email = inputData.Email
+            //    });
+            //}
 
             // Check if user data needs updating
             if (existingInputs.UserData != serializedInputData)
@@ -131,11 +133,13 @@ namespace MealGeniusBackend.Controllers
             }
 
             // Resend confirmation email if necessary
-            await ResendConfirmationEmail(existingUser, inputData.Name);
+            //await ResendConfirmationEmail(existingUser, inputData.Name);
             return Ok(new RegisterOut
             {
-                Message = "User exists already, your data has been updated, and the email confirmation has been resent. Please check your email.",
-                Status = UserStatus.InputsbutNoDashboards
+                Message = "User exists already, your data has been updated",
+                Status = UserStatus.InputsbutNoDashboards,
+                Email = inputData.Email,
+                Token = existingUser.Id
             });
         }
         private async Task<IActionResult> CreateNewUser(UserProfile inputData, string serializedInputData)
@@ -162,11 +166,13 @@ namespace MealGeniusBackend.Controllers
             await _dbcontext.SaveChangesAsync();
 
             // Send email confirmation
-            await SendConfirmationEmailAndUpdateTimestamp(createResult.User, inputData.Name);
+            //await SendConfirmationEmailAndUpdateTimestamp(createResult.User, inputData.Name);
             return Ok(new RegisterOut
             {
-                Message = "Registration successful! Please check your email to confirm your account.",
-                Status = UserStatus.AccountNotConfirmed
+                Message = "You've been successfully Registred !",
+                Status = UserStatus.AccountNotConfirmed,
+                Email = inputData.Email,
+                Token = createResult.User.Id
             });
         }
 

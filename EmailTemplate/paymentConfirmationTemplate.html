@@ -104,13 +104,15 @@
             align-items: center; /* items-center */
             justify-content: center; /* Center children horizontally as well */
         }
-
+        /* Ensures that the .container scales responsively */
         @media (max-width: 768px) {
             .container {
-                width: 95%;
-                height: auto;
-                padding: 40px 20px;
+                width: 95%; /* Take up 100% of the viewport width */
+                height: 75%; /* Take up 100% of the viewport height */
+                padding: 40px 20px; /* Add some padding to the sides */
                 margin: 40px auto;
+                border-radius: 32px; /* Adjust this value to match the Figma design */
+                box-sizing: border-box; /* Include padding and border in the element's size */
             }
 
             .logo img {
@@ -119,6 +121,8 @@
             }
 
             .email-container .content p {
+                font-family: 'Sarabun', sans-serif;
+                font-weight: 400; /* Sarabun extra bold */
                 font-size: 14px;
             }
         }

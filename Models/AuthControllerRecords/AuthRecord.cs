@@ -16,6 +16,23 @@ namespace MealGeniusBackend.Models.AuthControllerRecords
     public record UsernameSetupModel(string UserId, string Username);
 
 
+    public class ConfirmAccessOut
+    {
+        public string Message { get; set; }
+        public UserStatus Status { get; set; }
+
+        public string Email { get; set; }
+        public string Token { get; set; } = "";
+    }
+
+    public class ResetPasswordOut
+    {
+        public string Message { get; set; }
+        public UserStatus Status { get; set; }
+
+        public string Email { get; set; }
+        public string Token { get; set; } = "";
+    }
     public class LoginEmailOut
     {
         public string Message { get; set; }
@@ -23,7 +40,6 @@ namespace MealGeniusBackend.Models.AuthControllerRecords
 
         public string Email { get; set; }
         public string Token { get; set; } = "";
-
     }
 
     public class LoginOutput

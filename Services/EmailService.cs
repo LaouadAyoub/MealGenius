@@ -143,7 +143,7 @@ namespace MealGeniusBackend.Services
  
                 htmlTemplate = CustomizePaymentConfirmationEmailTemplate(htmlTemplate, userFirstName, confirmationLink);
 
-                string emailSubject = "Payment confirmation";
+                string emailSubject = "MealGenius Payment Confirmation";
                 await SendEmail(email, emailSubject, htmlTemplate);
                 _logger.LogInformation("Payment confirmation email sent successfully.");
 
