@@ -50,12 +50,12 @@ namespace MealGeniusBackend.Services
                 if (userTask == null)
                     return false;
 
-
-                if (userTask == null)
-                    return false;
                 if (userTask.Status != UserTaskStatus.Completed)
                 {
-                    string userTaskMessage = JsonConvert.SerializeObject(userTask);
+                    string userTaskMessage = JsonConvert.SerializeObject(userTask, new JsonSerializerSettings
+                    {
+                        ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+                    });
                     _rabbitMQService.PublishMessageInTaskQueue(userTaskMessage);
                     _logger.LogInformation("Email confirmed for user with ID: {UserId} and task message published to queue.", user.Id);
                     return true;

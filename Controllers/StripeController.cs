@@ -1,7 +1,9 @@
 ﻿using MealGeniusBackend.DataAcess;
+using MealGeniusBackend.Models;
 using MealGeniusBackend.Services;
 using MealGeniusBackend.Services.Auth;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Stripe;
 
@@ -15,13 +17,15 @@ namespace MealGeniusBackend.Controllers
         private readonly IUserService _userService; // You might need user service to fetch user data if required
         private readonly ILogger<StripeWebhookController> _logger; // Ensure ILogger is injected
         private readonly IExecuteTaskService _executeTaskService;
+        private readonly UserDbContext _dbcontext;
 
-        public StripeWebhookController(IConfiguration configuration, IEmailService emailService, IUserService userService, ILogger<StripeWebhookController> logger, IExecuteTaskService executeTaskService)
+        public StripeWebhookController(IConfiguration configuration, IEmailService emailService, IUserService userService, ILogger<StripeWebhookController> logger, IExecuteTaskService executeTaskService, UserDbContext dbcontext)
         {
             _emailService = emailService;
             _userService = userService;
             _logger = logger;
             _executeTaskService = executeTaskService;
+            _dbcontext = dbcontext;
         }
 
         [HttpPost("webhook")]
@@ -31,15 +35,15 @@ namespace MealGeniusBackend.Controllers
 
             var endpointSecret = Environment.GetEnvironmentVariable("EndpointSecret");
 
-            if (endpointSecret.IsNullOrEmpty())
+            if (string.IsNullOrEmpty(endpointSecret))
             {
-                //REDACTED
+                // Fallback secret; should ideally be retrieved securely
                 endpointSecret = "REDACTED";
-                _logger.LogWarning("endpoint Secret is null !!!!!!!!!!");
+                _logger.LogWarning("Endpoint secret is null or empty. Using fallback.");
             }
 
+            _logger.LogInformation("I am inside the handle of the webhook");
 
-            _logger.LogInformation($"I am inside the handle of the webhook");
             try
             {
                 var stripeEvent = EventUtility.ConstructEvent(
@@ -51,51 +55,57 @@ namespace MealGeniusBackend.Controllers
 
                 if (stripeEvent.Type == Events.CheckoutSessionCompleted)
                 {
-                    string customerEmail;
                     var session = stripeEvent.Data.Object as Stripe.Checkout.Session;
                     if (session.PaymentStatus == "paid")
                     {
-                        customerEmail = session.CustomerDetails.Email; // Assuming email is collected
-
+                        var customerEmail = session.CustomerDetails.Email; // Assuming email is collected
                         var clientReferenceId = session.ClientReferenceId;
-                        if (!clientReferenceId.IsNullOrEmpty())
+
+                        ApplicationUser user = null;
+                        if (!string.IsNullOrEmpty(clientReferenceId))
                         {
-                            var user = await _userService.GetUserByIdAsync(clientReferenceId);
-                            if (user != null)
+                            user = await _userService.GetUserByIdAsync(clientReferenceId);
+                        }
+
+                        if (user == null) // No user found with clientReferenceId, or clientReferenceId is null/empty
+                        {
+                            user = await _userService.GetUserByEmailAsync(customerEmail);
+                        }
+
+                        if (user != null)
+                        {
+                            user.PaymentConfirmed = true;
+                            user.PaymentConfirmedAt = DateTime.UtcNow;
+                            _logger.LogInformation($"Database updated with payment confirmation for user {user.Email}.");
+                        }
+                        else
+                        {
+                            // Create a new user if not found by id or email
+                            var (result, newUser) = await _userService.CreateUserAsync(customerEmail);
+                            if (result.Succeeded)
                             {
-                                user.PaymentConfirmed = true;
-                                user.PaymentConfirmedAt = DateTime.UtcNow;
-                                customerEmail = user.Email!;
-                            }
-                            else
-                            {
-                                _logger.LogInformation($"User with id {clientReferenceId} not found.");
-                                
-                                var userByEmail = await _userService.GetUserByEmailAsync(customerEmail);
-                                if (userByEmail != null)
-                                {
-                                    userByEmail.PaymentConfirmed = true;
-                                    userByEmail.PaymentConfirmedAt = DateTime.UtcNow;
-                                }
-                                else
-                                { 
-                                    // if the user is not found by id or email, you can create a new user here
-                                    var (result, newUser) = await _userService.CreateUserAsync(customerEmail);
-                                    if (result.Succeeded)
-                                    {
-                                        newUser.PaymentConfirmed = true;
-                                        newUser.PaymentConfirmedAt = DateTime.UtcNow;
-                                    }
-                                }
+                                newUser.PaymentConfirmed = true;
+                                newUser.PaymentConfirmedAt = DateTime.UtcNow;
+                                user = newUser; // Update user reference to new user
+                                _logger.LogInformation($"New user created and payment confirmed for {newUser.Email}.");
                             }
                         }
-                        if (!string.IsNullOrEmpty(customerEmail))
+
+                        await _dbcontext.SaveChangesAsync(); // Save changes once for any user scenario
+
+                        if (user != null) // Check if user object is properly instantiated
                         {
                             // Send payment confirmation email
-                            await _executeTaskService.ExecuteUserTask(customerEmail);
-                            await SendPaymentConfirmationEmail(customerEmail);
+                            await SendPaymentConfirmationEmail(user.Email); // Send email to the confirmed user's email
+                            _logger.LogInformation($"Payment confirmation email sent to {user.Email}.");
+                            var existingUserInputs = await _dbcontext.UserInputs.FirstOrDefaultAsync(inputs => inputs.UserId == user.Id);
 
-                            _logger.LogInformation($"Payment confirmation email sent to {customerEmail}.");
+                            if (existingUserInputs is not null && !existingUserInputs.UserData.IsNullOrEmpty())
+                            {
+                                // Execute task for confirmed user
+                                await _executeTaskService.ExecuteUserTask(user.Email);
+                            }
+
                         }
                     }
                 }
@@ -113,6 +123,7 @@ namespace MealGeniusBackend.Controllers
                 return StatusCode(500, e.Message);
             }
         }
+
 
         private async Task SendPaymentConfirmationEmail(string email)
         {

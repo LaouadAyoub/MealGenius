@@ -241,8 +241,8 @@ namespace MealGeniusBackend.Services
             var response = await email.SendAsync();
             if (!response.Successful)
             {
-                _logger.LogError($"Failed to send confirmation email: {string.Join(", ", response.ErrorMessages)}");
-                throw new Exception($"Failed to send confirmation email: {string.Join(", ", response.ErrorMessages)}");
+                _logger.LogError($"Failed to send email: {string.Join(", ", response.ErrorMessages)}");
+                throw new Exception($"Failed to send email: {string.Join(", ", response.ErrorMessages)}");
             }
         }
 

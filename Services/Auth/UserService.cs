@@ -28,15 +28,13 @@ namespace MealGeniusBackend.Services.Auth
             {
                 Email = email,
                 UserName = userName,
-                UserCreatedAt = DateTime.UtcNow // Setting the creation time when creating the user object
+                UserCreatedAt = DateTime.UtcNow
             };
 
             var result = await _userManager.CreateAsync(user, password);
 
-            // No need to update and save again as the creation time is already set
             return (result, user);
         }
-
 
         public async Task<(IdentityResult Result, ApplicationUser User)> CreateUserAsync(string iEmail, string iFirstName = "")
         {
@@ -54,12 +52,12 @@ namespace MealGeniusBackend.Services.Auth
             return (result, user);
         }
 
-        public async Task<ApplicationUser?> GetUserByIdAsync(string userId)
+        public async Task<ApplicationUser> GetUserByIdAsync(string userId)
         {
             var user = await _userManager.FindByIdAsync(userId);
             return user;
         }
-        public async Task<ApplicationUser?> GetUserByEmailAsync(string email)
+        public async Task<ApplicationUser> GetUserByEmailAsync(string email)
         {
             var user = await _userManager.FindByEmailAsync(email);
             return user;
@@ -86,12 +84,13 @@ namespace MealGeniusBackend.Services.Auth
     public interface IUserService
     {
         Task<ApplicationUser> GetUserByIdAsync(string userId);
+        Task<ApplicationUser> GetUserByEmailAsync(string email);
+
 
         Task<(IdentityResult Result, ApplicationUser User)> CreateUserAsync(string email, string userName = "");
 
         Task<(IdentityResult Result, ApplicationUser User)> CreateUserAsync(string email, string userName, string password);
 
-        Task<ApplicationUser?> GetUserByEmailAsync(string email);
 
         Task<bool> UserHasDashboards(ApplicationUser User);
 

@@ -198,9 +198,6 @@ namespace MealGeniusBackend.Controllers
             return Ok(loginOutput);
         }
 
-
-
-
         #region login-google
         //[HttpGet("GoogleLogin")]
         //public IActionResult GoogleLogin(string returnUrl = "/")
@@ -416,9 +413,6 @@ namespace MealGeniusBackend.Controllers
             return Ok(new { Message = "Email sent successfully" });
         }
 
-
-
-
         [HttpPost("ConfirmAccess")]
         public async Task<IActionResult> ConfirmAccess([FromBody] ConfirmAccessModel model)
         {
@@ -479,6 +473,7 @@ namespace MealGeniusBackend.Controllers
                 Token = user.Id
             });
         }
+
         [HttpPost]
         [Route("SetupPassword")]
         public async Task<IActionResult> SetupPassword([FromBody] PasswordSetupModel model)
@@ -489,18 +484,34 @@ namespace MealGeniusBackend.Controllers
                 return BadRequest("User not found.");
             }
 
+            // Check if the user already has a password
+            var hasPassword = await _userManager.HasPasswordAsync(user);
+            if (hasPassword)
+            {
+                // Remove the existing password
+                var removePasswordResult = await _userManager.RemovePasswordAsync(user);
+                if (!removePasswordResult.Succeeded)
+                {
+                    return BadRequest(new { ErrorMessage = removePasswordResult.Errors.FirstOrDefault()?.Description ?? "Failed to remove existing password, please try again." });
+                }
+            }
+
+            // Set the new password
             var setPasswordResult = await _userManager.AddPasswordAsync(user, model.Password);
             if (!setPasswordResult.Succeeded)
             {
-                return BadRequest(new { ErrorMessage = setPasswordResult.Errors.FirstOrDefault()?.Description ?? "Failed to set password, please try again !"});
+                return BadRequest(new { ErrorMessage = setPasswordResult.Errors.FirstOrDefault()?.Description ?? "Failed to set password, please try again." });
             }
 
             var email = user.Email;
-            return Ok(new 
-                    {   Message = "Password setup successful",
-                        Email = email
-                    });
+            return Ok(new
+            {
+                Message = "Password setup successful",
+                Email = email
+            });
         }
+
+
         [HttpPost]
         [Route("SetupPasswordByEmail")]
         public async Task<IActionResult> SetupPasswordByEmail([FromBody] PasswordSetupByEmailModel model)

@@ -85,7 +85,7 @@ namespace MealGeniusBackend.Controllers
                     _dbcontext.UserInputs.Add(userInput);
                     await _dbcontext.SaveChangesAsync();
 
-                    //await SendConfirmationEmailAndUpdateTimestamp(existingUser, inputData.Name);
+                    await SendConfirmationEmailAndUpdateTimestamp(existingUser, inputData.Name);
                     registerOut.Message = "User exists already, your data has been updated";
                     registerOut.Status = UserStatus.AccountNotConfirmed;
                     registerOut.Email = inputData.Email;
@@ -166,7 +166,7 @@ namespace MealGeniusBackend.Controllers
             await _dbcontext.SaveChangesAsync();
 
             // Send email confirmation
-            //await SendConfirmationEmailAndUpdateTimestamp(createResult.User, inputData.Name);
+            await SendConfirmationEmailAndUpdateTimestamp(createResult.User, inputData.Name);
             return Ok(new RegisterOut
             {
                 Message = "You've been successfully Registred !",
