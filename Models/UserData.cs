@@ -39,12 +39,15 @@
     public class UserMealsAndGroceryPreferences
     {
         public List<string> CuisineLikes { get; set; }
+        public List<string> TastePreferences { get; set; }
+
         public List<string> FavoriteMealTypes { get; set; }
 
         public List<string> EssentialIngredients { get; set; }
         public List<string> DislikedIngredients { get; set; }
-        public string PreferredCookingTime { get; set; }
-        public string MealPreparationStyle { get; set; }
+        //public string PreferredCookingTime { get; set; }
+        //public string MealPreparationStyle { get; set; }
+
         public string MeasurementForLiquids { get; set; }
         public string MeasurementForTemperature { get; set; }
 

@@ -75,10 +75,18 @@ namespace MealGeniusBackend.Models
 
 
 
+        [JsonProperty("tastePreferences")]
+        public List<string>? TastePreferences { get; set; }
+        [JsonProperty("otherTastePreferences")]
+        public string? OtherTastePreferences { get; set; }
+
+
+
         [JsonProperty("cuisinePreferences")]
         public List<string>? CuisinePreferences { get; set; }
         [JsonProperty("otherCuisinePreferences")]
         public string? OtherCuisinePreferences { get; set; }
+
         [JsonProperty("favoriteDishes")]
         public List<FavoriteDish>? FavoriteDishes { get; set; }
 

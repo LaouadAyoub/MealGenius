@@ -46,7 +46,10 @@ namespace MealGeniusBackend.Controllers
             {
                 var registerOut = new RegisterOut();
                 var UserData = DtoMapper.MapUserProfileToUserData(inputData);
-                string serializedInputData = JsonConvert.SerializeObject(UserData);
+                string serializedInputData = JsonConvert.SerializeObject(UserData, Formatting.None, new JsonSerializerSettings
+                {
+                    NullValueHandling = NullValueHandling.Ignore
+                });
 
                 // Check if the user already exists
                 var existingUser = await _userManager.FindByEmailAsync(inputData.Email);
@@ -167,7 +170,7 @@ namespace MealGeniusBackend.Controllers
 
             // Send email confirmation
             await SendConfirmationEmailAndUpdateTimestamp(createResult.User, inputData.Name);
-            return Ok(new RegisterOut
+                return Ok(new RegisterOut
             {
                 Message = "You've been successfully Registred !",
                 Status = UserStatus.AccountNotConfirmed,

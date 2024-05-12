@@ -74,7 +74,7 @@ namespace MealGeniusBackend.Controllers
 
 
 
-            loginEmailOutput.Message = "Login successful";
+            loginEmailOutput.Message = "User identified successfully !";
             loginEmailOutput.Status = UserStatus.Active;
             loginEmailOutput.Email = user.Email;
             return Ok(loginEmailOutput);
@@ -150,11 +150,14 @@ namespace MealGeniusBackend.Controllers
             // Fill in the email for the response
             loginOutput.Email = user.Email;
 
+            // Check if the user has paid
+            var isPaymentConfirmed = user.PaymentConfirmed;
+
             // Check if the user is confirmed
             var isEmailConfirmed = await _userManager.IsEmailConfirmedAsync(user);
 
             if (!isEmailConfirmed)
-            {
+            {   
                 loginOutput.Message = "Email not confirmed, please check your Email to confirm your account";
                 loginOutput.Status = UserStatus.AccountNotConfirmed;
                 // resend email confirmation
@@ -182,7 +185,6 @@ namespace MealGeniusBackend.Controllers
                 return Ok(loginOutput);
             }
             //check if the user has paid
-            var isPaymentConfirmed = user.PaymentConfirmed;
             if (!isPaymentConfirmed)
             {
                 loginOutput.Message = "🌟 Hey there! Looks like your payment needs a little nudge to complete. Let’s get you all set up! 🍽️";
