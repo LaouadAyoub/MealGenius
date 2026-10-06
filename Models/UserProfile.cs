@@ -2,7 +2,8 @@
 
 namespace MealGeniusBackend.Models
 {
-    public class UserProfile
+    using System.ComponentModel.DataAnnotations;
+    public class UserProfile : IValidatableObject
     {
         [JsonProperty("name")]
         public string Name { get; set; }
@@ -110,7 +111,20 @@ namespace MealGeniusBackend.Models
         public string? IngredientsWeightUnit { get; set; }
 
         [JsonProperty("email")]
+        [Required, EmailAddress, StringLength(254)]
         public string Email { get; set; }
+
+        public IEnumerable<ValidationResult> Validate(ValidationContext context)
+        {
+            if (string.IsNullOrWhiteSpace(Name) || Name.Length > 100)
+                yield return new ValidationResult("Name must contain 1–100 characters.", [nameof(Name)]);
+            if (!int.TryParse(Age, out var age) || age < 18 || age > 120)
+                yield return new ValidationResult("Age must be between 18 and 120.", [nameof(Age)]);
+            foreach (var value in new[] { (Weight, nameof(Weight)), (Height, nameof(Height)) })
+                if (!double.TryParse(value.Item1, System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out var number) || !double.IsFinite(number) || number <= 0)
+                    yield return new ValidationResult("Measurement must be a positive number.", [value.Item2]);
+        }
     }
 
     public class FavoriteDish

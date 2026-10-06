@@ -9,7 +9,7 @@ using Newtonsoft.Json;
 
 namespace MealGeniusBackend.Controllers
 {
-    [Authorize]
+    [Authorize(Policy = "PaidUser")]
     [Route("api/[controller]")]
     [ApiController]
     public class UserDashboardController : Controller
@@ -36,6 +36,7 @@ namespace MealGeniusBackend.Controllers
             // Fetch the user's dashboard info
             var userDashboard = await _dbcontext.UserDashboards
                                 .Where(ud => ud.UserId == user.Id)
+                                .OrderByDescending(ud => ud.Task.CreatedAt)
                                 .FirstOrDefaultAsync();
 
             if (userDashboard == null)

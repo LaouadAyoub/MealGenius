@@ -69,7 +69,7 @@ namespace MealGeniusBackend.Services.Auth
             var existingMealPlan = await _dbcontext.MealPlans.FirstOrDefaultAsync(mealPlan => mealPlan.UserId == User.Id);
             var existingDashboard = await  _dbcontext.UserDashboards.FirstOrDefaultAsync(dashboard => dashboard.UserId == User.Id);
 
-            if (existingDashboard is null && existingMealPlan is null)
+            if (existingDashboard is null || existingMealPlan is null)
                 return false;
 
             if (existingMealPlan.MealPlanJson.IsNullOrEmpty() || existingMealPlan.GroceryListJson.IsNullOrEmpty())

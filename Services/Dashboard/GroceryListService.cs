@@ -1,84 +1,25 @@
-﻿using MealGeniusBackend.DataAcess;
+using MealGeniusBackend.DataAcess;
+using MealGeniusBackend.Helpers;
 using MealGeniusBackend.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using Microsoft.VisualBasic;
 using Newtonsoft.Json;
-using System.Buffers.Text;
-using System.ComponentModel.Design;
-using System.Net.NetworkInformation;
-using System.Runtime.Intrinsics.X86;
-using System;
-using System.Text;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-// OpenAI_API.Models.Model.GPT4
-
 
 namespace MealGeniusBackend.Services.Dashboard
 {
-    public interface IGroceryListService
+    public interface IGroceryListService { Task GenerateGroceryList(UserTaskDTO task); }
+    public class GroceryListService(UserDbContext _dbContext, IOpenAIService _openAIService,
+        ILogger<GroceryListService> _logger) : IGroceryListService
     {
-        Task GenerateGroceryList(UserTaskDTO userTaskDTO);
-    }
-
-
-    public class GroceryListService : IGroceryListService
-    {
-        private readonly UserDbContext _dbContext;
-        private readonly ILogger<MealPlanService> _logger;
-        private readonly IOpenAIService _openAIService;
-        private readonly IAzureBlobService _azureBlobService;
-        private readonly ImageService _ImageService;
-        public GroceryListService(UserDbContext userDbContext, ILogger<MealPlanService> logger, IOpenAIService openAIService, IAzureBlobService azureBlobService, ImageService imageService)
-        {
-            _dbContext = userDbContext;
-            _logger = logger;
-            _openAIService = openAIService;
-            _azureBlobService = azureBlobService;
-            _ImageService = imageService;
-        }
         public async Task GenerateGroceryList(UserTaskDTO userTaskDTO)
         {
-            var userTask = _dbContext.Tasks.Where(u => u.Id == userTaskDTO.Id).FirstOrDefault();
-
-            try
+            var userTask = await _dbContext.Tasks.SingleAsync(t => t.Id == userTaskDTO.Id);
+            var userInput = await _dbContext.UserInputs.SingleAsync(i => i.TaskId == userTaskDTO.Id);
+            var existingMealPlan = await _dbContext.MealPlans.SingleAsync(p => p.TaskId == userTaskDTO.Id);
+            if (existingMealPlan.GroceryListVersion > 0) return;
+            userTask.GroceryListsGenerationExcecutedAt = DateTime.UtcNow;
+            await _dbContext.SaveChangesAsync();
+            if (string.IsNullOrWhiteSpace(existingMealPlan.GroceryListJson))
             {
-                userTask.GroceryListsGenerationExcecutedAt = DateTime.UtcNow;
-                await _dbContext.SaveChangesAsync();
-                // Logic for generating a user dashboard
-                var userInput = _dbContext.UserInputs
-                            .Where(u => u.TaskId == userTaskDTO.Id)
-                            .FirstOrDefault();
-                if (userInput is null || userInput.UserData is null)
-                {
-                    _logger.LogError("UserInput not found");
-                    return;
-                }
-
-                var existingMealPlan = _dbContext.MealPlans.SingleOrDefault(mealPlan => mealPlan.TaskId == userTaskDTO.Id);
-
-                if (existingMealPlan is null)
-                {
-                    throw new Exception("No meal plan found to generate the grocery list");
-                }
-
-                if (!existingMealPlan.GroceryListJson.IsNullOrEmpty())
-                {
-                    if (userTaskDTO.Status == UserTaskStatus.TobeRetried)
-                    {
-                        //_dbContext.UserDashboards.Remove(existingDashboard);
-                        existingMealPlan.GroceryListJson = "";
-                        await _dbContext.SaveChangesAsync();
-                    }
-                    else
-                    {
-                        _logger.LogInformation("GroceryList already exists for this task");
-                        return;
-                    }
-                }
-
-                //Deserialize the meal plan json
                 var timer = new ServiceTaskTimer("GroceryList", "The generation of : Generate a JSON file that contains a comprehensive grocery list for a user");
                 timer.Start();
                 var myMealPlan = JsonConvert.DeserializeObject<UserMealsRoot>(existingMealPlan.MealPlanJson);
@@ -86,7 +27,7 @@ namespace MealGeniusBackend.Services.Dashboard
                 var groceryList_JsonExamplePath = "JsonFiles/Grocery_List_Example.json";
                 string groceryList_JsonExample = File.ReadAllText(groceryList_JsonExamplePath);
 
-                var UserInputsJson = userInput.UserData;
+                var UserInputsJson = PromptPrivacy.RemoveEmail(userInput.UserData);
                 //GroceryList Generation
 
                 string systemPromptGroceryListGeneration = $@"You are an AI assistant for MealGenius, an app designed for personalized nutrition and meal planning.
@@ -113,7 +54,7 @@ Additionally, if the list includes prepared food items (e.g., ""Grilled Chicken 
 This approach ensures the grocery list is practical for shopping, focusing on the ingredients' most basic and purchasable forms.
 The JSON structure should follow this Jsonformat:{groceryList_JsonExample}
 ";
-                var GroceryList_Json = await _openAIService.GenerateJsonBasedOnPromptResponseAsync(systemPromptGroceryListGeneration, userPromptGroceryListGeneration, maxTokens: 4000, model: "gpt-4-1106-preview", temperature: 0);
+                var GroceryList_Json = await _openAIService.GenerateJsonBasedOnPromptResponseAsync(systemPromptGroceryListGeneration, userPromptGroceryListGeneration, maxTokens: 4000, temperature: 0);
 
                 var groceryList = JsonConvert.DeserializeObject<GroceryList>(GroceryList_Json);
 
@@ -171,178 +112,37 @@ The JSON structure should follow this Jsonformat:{groceryList_JsonExample}
 
 
                 existingMealPlan.GroceryListJson = JsonConvert.SerializeObject(groceryCategoriesDetailed);
-
                 await _dbContext.SaveChangesAsync();
-                _logger.LogInformation($"Grocerylist generated for UserId: {userTaskDTO.UserId}");
-
-                // Generate images for grocery items
-                var existing_groceryList = JsonConvert.DeserializeObject<GroceryCategoriesDetailed>(existingMealPlan.GroceryListJson);
-
-                foreach (var groceryCategory in existing_groceryList.GroceryCategories)
-                {
-                    foreach (var groceryItem in groceryCategory.GroceryItems)
-                    {
-                        if (!groceryItem.GroceryItem_ImageUrl.IsNullOrEmpty())
-                            continue;
-
-                        // verifier si l'image du groceryItem existe dans la table GroceryItemImages
-                        //public DbSet<GroceryItem> GroceryItems { get; set; }  // Ajout du nouveau DbSet
-
-                        var existingGroceryItem = _dbContext.GroceryItems.FirstOrDefault(g =>
-                            g.Name.ToLower() == groceryItem.GroceryItemName.ToLower() &&
-                            !string.IsNullOrEmpty(g.ImageUrl)); var groceryItemSimilarNamesToLower = groceryItem.SimilarNames.Select(name => name.ToLower()).ToList();
-                        bool imageFound = false;
-
-                        //verifier si il existe dans groceryItem.SimilarNames
-                        if (existingGroceryItem != null && !existingGroceryItem.ImageUrl.IsNullOrEmpty())
-                        {
-                            groceryItem.GroceryItem_ImageUrl = existingGroceryItem.CompressedImageUrl;
-                            imageFound = true;
-                            existingGroceryItem.SimilarNames = groceryItemSimilarNamesToLower;
-                            // Ensure existingSimilarNames is not null and is a List<string>
-                            var existingSimilarNames = existingGroceryItem.SimilarNames ?? new List<string>();
-
-                            // Add new similar names if they don't already exist in the existingSimilarNames list
-                            foreach (var name in groceryItemSimilarNamesToLower)
-                            {
-                                if (!existingSimilarNames.Contains(name))
-                                {
-                                    existingSimilarNames.Add(name);
-                                }
-                            }
-                            // Update the existingGroceryItem's SimilarNames with the updated list
-                            existingGroceryItem.SimilarNames = existingSimilarNames;
-
-                            continue;
-                        }
-                        string itemNameToLower = groceryItem.GroceryItemName.ToLower();
-                        // Vérifier si l'un des noms similaires correspond exactement à item.Name (en tenant compte de la casse)
-
-                        foreach (var groceryItemDb in _dbContext.GroceryItems)
-                        {
-                            if (!groceryItemDb.SimilarNames.IsNullOrEmpty())
-                            {
-                                var matchFoundInSimilarNames = groceryItemDb.SimilarNames.Any(similarName => similarName.ToLower() == itemNameToLower);
-                                if (matchFoundInSimilarNames)
-                                {
-
-                                    groceryItem.GroceryItem_ImageUrl = groceryItemDb.CompressedImageUrl;
-                                    imageFound = true;
-                                    var existingSimilarNames = groceryItemDb.SimilarNames ?? new List<string>();
-                                    //var matchFoundInExistingSimilarNames = groceryItem.SimilarNames.Any(similarName => similarName.ToLower() == name.ToLower());
-
-                                    foreach (var name in groceryItem.SimilarNames)
-                                    {
-                                        var matchFoundInExistingSimilarNames = existingSimilarNames.Any(similarName => similarName.ToLower() == name.ToLower());
-                                        if (matchFoundInExistingSimilarNames)
-                                        {
-                                            existingSimilarNames.Add(name);
-                                        }
-                                    }
-
-                                    // Update the existingGroceryItem's SimilarNames with the updated list
-                                    groceryItemDb.SimilarNames = existingSimilarNames;
-
-                                    break;
-                                }
-                            }
-                        }
-                        if (imageFound)
-                        {
-                            existingMealPlan.GroceryListJson = JsonConvert.SerializeObject(existing_groceryList);
-
-                            await _dbContext.SaveChangesAsync();
-                            continue;
-                        }
-
-                        var existingSimilarGroceryItem = _dbContext.GroceryItems.FirstOrDefault(g => g.SimilarNames.Contains(groceryItem.GroceryItemName));
-
-                        if (existingSimilarGroceryItem != null)
-                        {
-                            groceryItem.GroceryItem_ImageUrl = existingSimilarGroceryItem.CompressedImageUrl;
-                            imageFound = true;
-
-                            existingSimilarGroceryItem.SimilarNames = groceryItemSimilarNamesToLower;
-                            // Ensure existingSimilarNames is not null and is a List<string>
-                            var existingSimilarNames = existingSimilarGroceryItem.SimilarNames ?? new List<string>();
-                            foreach (var name in groceryItemSimilarNamesToLower)
-                            {
-                                if (!existingSimilarNames.Contains(name))
-                                {
-                                    existingSimilarNames.Add(name);
-                                }
-                            }
-
-                            // Update the existingGroceryItem's SimilarNames with the updated list
-                            existingGroceryItem.SimilarNames = existingSimilarNames;
-                            continue;
-                        }
-                        foreach (var similarName in groceryItem.SimilarNames)
-                        {
-                            var existingSimilarItem = _dbContext.GroceryItems.FirstOrDefault(g => g.Name.ToLower() == similarName.ToLower());
-
-                            if (existingSimilarItem != null && !existingSimilarItem.ImageUrl.IsNullOrEmpty())
-                            {
-                                groceryItem.GroceryItem_ImageUrl = existingSimilarItem.CompressedImageUrl;
-                                imageFound = true;
-                                break;
-                            }
-                            var existingSimilarGroceryItemInSimilarNames = _dbContext.GroceryItems.FirstOrDefault(g => g.SimilarNames.Contains(similarName));
-                            if (existingSimilarGroceryItemInSimilarNames != null)
-                            {
-                                if (existingSimilarItem != null && !existingSimilarItem.ImageUrl.IsNullOrEmpty())
-                                {
-                                    groceryItem.GroceryItem_ImageUrl = existingSimilarItem.CompressedImageUrl;
-                                    imageFound = true;
-                                    break;
-                                }
-
-                            }
-                        }
-                        if (imageFound)
-                        {
-                            existingMealPlan.GroceryListJson = JsonConvert.SerializeObject(existing_groceryList);
-
-                            await _dbContext.SaveChangesAsync();
-                            continue;
-                        }
-                        //Make a list of strings to one string string1, string2,string3
-
-                        var existingNotFoundGroceryItem = _dbContext.NotFoundGroceryItems.FirstOrDefault(g => g.Name.ToLower() == groceryItem.GroceryItemName.ToLower());
-                        if (existingNotFoundGroceryItem is null)
-                        {
-                            groceryItemSimilarNamesToLower = groceryItem.SimilarNames.Select(name => name.ToLower()).ToList();
-
-
-                            await _dbContext.NotFoundGroceryItems.AddAsync(new NotFoundGroceryItems { GroceryItemId = new Guid(), Name = groceryItem.GroceryItemName, Category = groceryCategory.CategoryName, SimilarGroceryItemFound = "", SimilarNames = groceryItemSimilarNamesToLower });
-                        }
-
-
-
-                    }
-                }
-
-                existingMealPlan.GroceryListJson = JsonConvert.SerializeObject(existing_groceryList);
-
-                userTask.UserOutputStatus = UserOutputStatus.GroceryListCompleted;
-
-                existingMealPlan.GroceryListVersion++;
-
-                await _dbContext.SaveChangesAsync();
-
-                return;
-
-
             }
-            catch (Exception ex)
+            // Nonempty JSON is a checkpoint, not proof that enrichment finished.
+            var groceries = JsonConvert.DeserializeObject<GroceryCategoriesDetailed>(existingMealPlan.GroceryListJson)
+                ?? throw new InvalidDataException("Missing grocery categories.");
+            if (groceries.GroceryCategories.Count == 0) throw new InvalidDataException("Empty grocery categories.");
+            var catalogue = await _dbContext.GroceryItems.ToListAsync();
+            var missingNames = new HashSet<string>(await _dbContext.NotFoundGroceryItems.Select(i => i.Name).ToListAsync(),
+                StringComparer.OrdinalIgnoreCase);
+            foreach (var category in groceries.GroceryCategories)
+            foreach (var item in category.GroceryItems)
             {
-                userTask.Status = UserTaskStatus.Failed;
-                await _dbContext.SaveChangesAsync();
-                _logger.LogError(ex, "Error while generating grocery list");
-                throw;
+                if (string.IsNullOrWhiteSpace(item.GroceryItemName)) throw new InvalidDataException("Unnamed grocery item.");
+                var match = GroceryImageMatcher.Find(catalogue, item.GroceryItemName, item.SimilarNames);
+                if (match is not null)
+                {
+                    item.GroceryItem_ImageUrl = string.IsNullOrWhiteSpace(match.CompressedImageUrl) ? match.ImageUrl : match.CompressedImageUrl;
+                    match.SimilarNames = GroceryImageMatcher.MergeAliases(match.SimilarNames, item.SimilarNames);
+                }
+                else if (missingNames.Add(item.GroceryItemName))
+                    _dbContext.NotFoundGroceryItems.Add(new NotFoundGroceryItems
+                    {
+                        GroceryItemId = Guid.NewGuid(), Name = item.GroceryItemName, Category = category.CategoryName,
+                        SimilarNames = item.SimilarNames ?? [], SimilarGroceryItemFound = ""
+                    });
             }
+            existingMealPlan.GroceryListJson = JsonConvert.SerializeObject(groceries);
+            existingMealPlan.GroceryListVersion = 1;
+            userTask.UserOutputStatus = UserOutputStatus.GroceryListCompleted;
+            await _dbContext.SaveChangesAsync();
         }
-
 
         private async Task GenerateGroceryInfos(GroceryCategory groceryCategory, string UserInputsJson)
         {
@@ -438,7 +238,7 @@ The JSON structure should follow this Jsonformat:{groceryList_JsonExample}
                 Align with MealGenius Theme: Ensure each description supports the MealGenius mission of combining education with enjoyment, helping users to discover the joy in healthy eating.
                 ";
 
-            var GroceryListDetailed_Json = await _openAIService.GenerateJsonBasedOnPromptResponseAsync(systemPromptDetailedGroceryListGeneration, userPromptDetailedGroceryListGeneration, maxTokens: 4000, model: "gpt-4-1106-preview", temperature: 0.5);
+            var GroceryListDetailed_Json = await _openAIService.GenerateJsonBasedOnPromptResponseAsync(systemPromptDetailedGroceryListGeneration, userPromptDetailedGroceryListGeneration, maxTokens: 4000, temperature: 0.5);
 
 
             var groceryListDetailed = JsonConvert.DeserializeObject<GroceryCategory>(GroceryListDetailed_Json);

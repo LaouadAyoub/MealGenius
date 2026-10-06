@@ -1,280 +1,72 @@
-﻿using Newtonsoft.Json;
-using RabbitMQ.Client;
-using RabbitMQ.Client.Events;
-using System;
 using System.Text;
-using System.Threading.Tasks;
 using MealGeniusBackend.Models;
-using MealGeniusBackend.Services.Dashboard;
-using MealGeniusBackend.DataAccess;
-using MealGeniusBackend.DataAcess;
-using MealGeniusBackend.Helpers;
-using Microsoft.IdentityModel.Tokens;
+using Newtonsoft.Json;
+using RabbitMQ.Client;
 
-namespace MealGeniusBackend.Services.RabbitMQ
+namespace MealGeniusBackend.Services.RabbitMQ;
+
+public sealed class RabbitMQService(IConfiguration configuration) : IDisposable
 {
+    public const string Queue = "mealgenius.generation.v2";
+    public const string FailedQueue = "mealgenius.generation.failed";
+    private readonly object publishLock = new();
+    private IConnection? connection;
+    private IModel? publisher;
 
-    public class RabbitMQService : IDisposable
+    public IConnection Connect()
     {
-        private readonly IConnection _connection;
-        private readonly IModel _channel;
-        private readonly ILogger<RabbitMQService> _logger;
-        private readonly IServiceScopeFactory _serviceScopeFactory;
-
-        public RabbitMQService(IServiceScopeFactory serviceScopeFactory, ILogger<RabbitMQService> logger)
+        if (!configuration.GetValue("Messaging:Enabled", true))
+            throw new InvalidOperationException("Messaging is disabled.");
+        var factory = new ConnectionFactory
         {
-            _logger = logger;
+            HostName = configuration["RABBITMQ_HOSTNAME"] ?? "localhost",
+            Port = configuration.GetValue("RABBITMQ_PORT", 5672),
+            UserName = configuration["RABBITMQ_USERNAME"] ?? throw new InvalidOperationException("Missing RABBITMQ_USERNAME."),
+            Password = configuration["RABBITMQ_PASSWORD"] ?? throw new InvalidOperationException("Missing RABBITMQ_PASSWORD."),
+            DispatchConsumersAsync = true, AutomaticRecoveryEnabled = true,
+            RequestedHeartbeat = TimeSpan.FromSeconds(30)
+        };
+        if (configuration.GetValue("RABBITMQ_TLS", false))
+            factory.Ssl = new SslOption { Enabled = true, ServerName = factory.HostName };
+        return factory.CreateConnection("MealGenius");
+    }
 
-            try
-            {
-                var factory = new ConnectionFactory()
-                {
-                    HostName = Environment.GetEnvironmentVariable("RABBITMQ_HOSTNAME") ?? "localhost",
-                    Port = int.TryParse(Environment.GetEnvironmentVariable("RABBITMQ_PORT"), out int port) ? port : 5672,
-                    UserName = Environment.GetEnvironmentVariable("RABBITMQ_USERNAME") ?? "root",
-                    Password = Environment.GetEnvironmentVariable("RABBITMQ_PASSWORD") ?? "root"
-                };
-                _connection = factory.CreateConnection();
-                _channel = _connection.CreateModel();
-                // Further queue declaration and other setup here
-                _channel.QueueDeclare(queue: "task_queue", durable: true, exclusive: false, autoDelete: false, arguments: null);
-
-                _serviceScopeFactory = serviceScopeFactory;
-
-                _logger.LogInformation("RabbitMQ Service has been initialized.");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error initializing RabbitMQ Service.");
-                throw; // Rethrow if you need to notify callers
-            }
-        }
-
-        public void PublishMessageInTaskQueue(string message)
+    public static void Declare(IModel channel)
+    {
+        channel.QueueDeclare(FailedQueue, true, false, false);
+        channel.QueueDeclare(Queue, true, false, false, new Dictionary<string, object>
         {
-            try
-            {
-                var body = Encoding.UTF8.GetBytes(message);
+            ["x-dead-letter-exchange"] = "",
+            ["x-dead-letter-routing-key"] = FailedQueue
+        });
+    }
 
-                _channel.BasicPublish(exchange: "", routingKey: "REDACTED", basicProperties: null, body: body);
-                _logger.LogInformation($"Message published to task_queue: {message}");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error publishing message to task_queue.");
-                throw; // Rethrow if you need to notify callers
-            }
-        }
-
-        public void ConsumeMessage()
+    public void Publish(UserTaskDTO task)
+    {
+        if (task.Id == Guid.Empty || string.IsNullOrWhiteSpace(task.UserId))
+            throw new ArgumentException("A task ID and user ID are required.");
+        lock (publishLock)
         {
-            var consumer = new EventingBasicConsumer(_channel);
-            consumer.Received += async (model, ea) =>
+            if (publisher?.IsOpen != true)
             {
-                using (var scope = _serviceScopeFactory.CreateScope())
-                {
-                    var dbContext = scope.ServiceProvider.GetRequiredService<UserDbContext>();
-
-                    var body = ea.Body.ToArray();
-                    var message = Encoding.UTF8.GetString(body);
-                    _logger.LogInformation($"Received message: {message}");
-
-                    if(string.IsNullOrEmpty(message))
-                    {
-                        _logger.LogError("RabbitMQ Service : Empty message received.");
-                        return;
-                    }
-
-                    UserTaskDTO? userTaskDTO = JsonConvert.DeserializeObject<UserTaskDTO>(message);
-                    // Change the status of the task to processing
-                    var userTask = dbContext.Tasks.Find(userTaskDTO?.Id);
-                    if (userTask == null)
-                    {
-                        _logger.LogError("RabbitMQ Service : Task not found.");
-                        return;
-                    }
-                    try
-                    {
-                        userTask.Status = UserTaskStatus.Ongoing;
-                        dbContext.Tasks.Update(userTask);
-                        dbContext.SaveChanges();
-
-
-                        var mealPlanService = scope.ServiceProvider.GetRequiredService<IMealPlanService>();
-                        var userDashboardService = scope.ServiceProvider.GetRequiredService<IUserDashboardService>();
-                        var groceryListService = scope.ServiceProvider.GetRequiredService<IGroceryListService>();
-                        var mealsImagesService = scope.ServiceProvider.GetRequiredService<IMealsImagesService>();
-
-                        // Generate the dashboard
-                        var timer = new ServiceTaskTimer("RabbitMQService", "Start the generation");
-                        timer.Start();
-                        await PollyPolicies.AnyExceptionRetryPolicy.ExecuteAsync(async () =>
-                        {
-                            await userDashboardService.GenerateUserDashboard(userTaskDTO);
-                        });
-                        await PollyPolicies.AnyExceptionRetryPolicy.ExecuteAsync(async () =>
-                        {
-                            await mealPlanService.GenerateMealPlan(userTaskDTO);
-                        });
-                        // Assuming this is already set up to run tasks in parallel
-                        await Task.WhenAll(
-                            RunWithNewScope(async scope =>
-                            {
-                                var groceryListService = scope.ServiceProvider.GetRequiredService<IGroceryListService>();
-                                await PollyPolicies.AnyExceptionRetryPolicy.ExecuteAsync(async () =>
-                                {
-                                    await groceryListService.GenerateGroceryList(userTaskDTO);
-                                });
-                            }),
-                            RunWithNewScope(async scope =>
-                            {
-                                var mealsImagesService = scope.ServiceProvider.GetRequiredService<IMealsImagesService>();
-                                await PollyPolicies.AnyExceptionRetryPolicy.ExecuteAsync(async () =>
-                                {
-                                    await mealsImagesService.GenerateMealsImages(userTaskDTO);
-                                });
-                            })
-                        );
-
-                        _logger.LogInformation($"RabbitMQ Service : Processed message successfully: {message}");
-                        timer.StopAndLog();
-
-                    }
-                    catch (Exception ex)
-                    {
-                        var userDashboard = dbContext.UserDashboards.FirstOrDefault(ud => ud.UserId == userTaskDTO.UserId);
-                        var mealPlan = dbContext.MealPlans.FirstOrDefault(mp => mp.UserId == userTaskDTO.UserId);
-
-                        if (userDashboard == null || mealPlan == null)
-                        {
-                            // Handle the case where one or both are null, possibly by setting the task status to Failed
-                            userTask.Status = UserTaskStatus.Failed;
-                            dbContext.Tasks.Update(userTask);
-                            dbContext.SaveChanges();
-                        }
-                        else
-                        {
-                            // Now safe to assume userDashboard and mealPlan are not null
-                            var groceryListJson = mealPlan.GroceryListJson;
-                            var userMealsJson = mealPlan.MealPlanJson;
-
-                            // Your existing checks and logic here
-                            if (userDashboard.WaterIntake.IsNullOrEmpty() || userDashboard.MacroTargets.IsNullOrEmpty()
-                                || userDashboard.MicroGuide.IsNullOrEmpty() || userDashboard.UserGoalsGuide.IsNullOrEmpty()
-                                || userDashboard.JsonUserKeyInfos.IsNullOrEmpty()
-                                || groceryListJson.IsNullOrEmpty()
-                                || userMealsJson.IsNullOrEmpty())
-                            {
-                                userTask.Status = UserTaskStatus.Failed;
-                                dbContext.Tasks.Update(userTask);
-                                dbContext.SaveChanges();
-                            }
-                            else
-                            {
-                                UserMealsRoot theUserMealsRoot = JsonConvert.DeserializeObject<UserMealsRoot>(userMealsJson);
-                                var mealWithNoImage = theUserMealsRoot.UserMeals.Where(m => string.IsNullOrEmpty(m.MealImage)).FirstOrDefault();
-
-                                if (mealWithNoImage is not null)
-                                {
-                                    userTask.Status = UserTaskStatus.Failed;
-                                    dbContext.Tasks.Update(userTask);
-                                    dbContext.SaveChanges();
-                                }
-                            }
-                        }
-
-                        _logger.LogError(ex, "RabbitMQ Service : Error processing message.");
-                    }
-                }
-            };
-
-            _channel.BasicConsume(queue: "task_queue",
-                                  autoAck: true,
-                                  consumer: consumer);
-        }
-
-        public void Dispose()
-        {
-            _channel.Close();
-            _connection.Close();
-        }
-
-        private async Task RunWithNewScope(Func<IServiceScope, Task> action)
-        {
-            using (var scope = _serviceScopeFactory.CreateScope())
-            {
-                await action(scope);
+                publisher?.Dispose();
+                connection?.Dispose();
+                connection = Connect();
+                publisher = connection.CreateModel();
+                Declare(publisher);
+                publisher.ConfirmSelect();
             }
+            var properties = publisher.CreateBasicProperties();
+            properties.Persistent = true;
+            properties.ContentType = "application/json";
+            properties.MessageId = task.Id.ToString();
+            publisher.BasicPublish("", Queue, properties, Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(task)));
+            publisher.WaitForConfirmsOrDie(TimeSpan.FromSeconds(10));
         }
     }
 
+    public void Dispose()
+    {
+        lock (publishLock) { publisher?.Dispose(); connection?.Dispose(); }
+    }
 }
-
-
-#region temporary code for testing
-//// temporary for testing
-//string dashboardJson = Path.Combine(Directory.GetCurrentDirectory(), "JsonFiles", "Dashboard.json");
-//string groceryListJson = Path.Combine(Directory.GetCurrentDirectory(), "JsonFiles", "groceryList.json");
-//string meals_no_imagesJson = Path.Combine(Directory.GetCurrentDirectory(), "JsonFiles", "Mealplan_no_images.json");
-//string mealsWithImagesJson = Path.Combine(Directory.GetCurrentDirectory(), "JsonFiles", "Mealplan_Images.json");
-
-//// verify all the paths
-
-//if (! ((System.IO.File.Exists(dashboardJson)) && (File.Exists(groceryListJson)) && (File.Exists(meals_no_imagesJson)) && (File.Exists(mealsWithImagesJson))))
-//{
-//    throw new FileNotFoundException($" The file does not exist. {dashboardJson} {groceryListJson} {meals_no_imagesJson} {mealsWithImagesJson}");
-//}
-//var dashboard = System.IO.File.ReadAllText(dashboardJson);
-//var groceryList = System.IO.File.ReadAllText(groceryListJson);
-//var meals_no_images = System.IO.File.ReadAllText(meals_no_imagesJson);
-//var mealsWithImages = System.IO.File.ReadAllText(mealsWithImagesJson);
-
-//var username = "MoroccanCuisineLover";
-//var exampleUser = dbContext.Users.FirstOrDefault(u => u.UserName == username);
-//var exampleDashboard = dbContext.UserDashboards.FirstOrDefault(ud => ud.User == exampleUser);
-
-
-//// wait 1 minute
-//await Task.Delay(TimeSpan.FromSeconds(30));
-//dbContext.UserDashboards.Add(new UserDashboard
-//{
-//    UserId = userTaskDTO.UserId,
-//    UserDashboardVersion = 1,
-//    MicroGuide = exampleDashboard.MicroGuide,
-//    MacroTargets = exampleDashboard.MacroTargets,
-//    UserGoalsGuide = exampleDashboard.UserGoalsGuide,
-//    WaterIntake = exampleDashboard.WaterIntake,
-//    JsonUserKeyInfos = exampleDashboard.JsonUserKeyInfos,
-//    TaskId = userTaskDTO.Id
-//});
-//dbContext.SaveChanges();
-//_logger.LogInformation("Task track : UserDashboard added");
-//// wait 1 minute
-//await Task.Delay(TimeSpan.FromSeconds(30));
-//var mealplan = new MealPlan
-//{
-//    UserId = userTaskDTO.UserId,
-//    MealPlanVersion = 1,
-//    GroceryListVersion = 0,
-//    MealsImagesVersion = 0,
-//    MealPlanJson = meals_no_images,
-//    GroceryListJson = "",
-//    TaskId = userTaskDTO.Id,
-//    Title = "Meal Plan",
-//};
-//dbContext.MealPlans.Add(mealplan);
-//dbContext.SaveChanges();
-//_logger.LogInformation("Task track : MealPlan added without images");
-//// wait 1 minute
-//await Task.Delay(TimeSpan.FromSeconds(30));
-//mealplan.MealPlanJson = mealsWithImages;
-//mealplan.MealsImagesVersion = 1;
-//dbContext.SaveChanges();
-//_logger.LogInformation("Task track : MealPlan added with images");
-//// wait 1 minute
-//await Task.Delay(TimeSpan.FromSeconds(30));
-//mealplan.GroceryListJson = groceryList;
-//mealplan.GroceryListVersion = 1;
-//dbContext.SaveChanges();
-//_logger.LogInformation("Task track : GroceryList added");
-#endregion

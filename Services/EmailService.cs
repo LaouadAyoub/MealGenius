@@ -1,4 +1,6 @@
-﻿using FluentEmail.Core;
+using MealGeniusBackend.Services.Auth;
+using System.Net;
+using FluentEmail.Core;
 using FluentEmail.Core.Models;
 using MealGeniusBackend.DataAcess;
 using MealGeniusBackend.Models;
@@ -23,15 +25,17 @@ namespace MealGeniusBackend.Services
         private readonly ILogger<EmailService> _logger;
         private readonly UserManager<ApplicationUser>  _userManager;
         private readonly UserDbContext _dbcontext;
+        private readonly IConfiguration _configuration;
 
 
 
-        public EmailService(IFluentEmailFactory emailFactory, ILogger<EmailService> logger, UserManager<ApplicationUser>  userManager, UserDbContext dbcontext)
+        public EmailService(IFluentEmailFactory emailFactory, ILogger<EmailService> logger, UserManager<ApplicationUser>  userManager, UserDbContext dbcontext, IConfiguration configuration)
         {
             _emailFactory = emailFactory;
             _logger = logger;
             _userManager = userManager;
             _dbcontext = dbcontext;
+            _configuration = configuration;
         }
         public async Task SendConfirmationEmail(ApplicationUser user, string name)
         {
@@ -39,16 +43,7 @@ namespace MealGeniusBackend.Services
             {
                 _logger.LogInformation("Generating email confirmation token.");
                 var confirmationToken = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-
-                _dbcontext.ConfirmationTokens.Add(new ConfirmationToken
-                {
-                    UserId = user.Id,
-                    Token = confirmationToken,
-                    IssuedAt = DateTime.UtcNow,
-                    TokenType = TokenType.EmailConfirmation
-                });
-                await _dbcontext.SaveChangesAsync();
-                _logger.LogInformation("Confirmation token generated and saved.");
+                _logger.LogInformation("Email token generated.");
 
                 var confirmationLink = BuildConfirmationLink(user.Id, confirmationToken);
                 var htmlTemplate = LoadEmailTemplate();
@@ -82,18 +77,10 @@ namespace MealGeniusBackend.Services
                     return;
                 }
 
-                var token = GenerateSecureToken();
-                _dbcontext.ConfirmationTokens.Add(new ConfirmationToken
-                {
-                    UserId = user.Id,
-                    Token = token,
-                    IssuedAt = DateTime.UtcNow,
-                    TokenType = TokenType.PasswordReset
-                });
-                await _dbcontext.SaveChangesAsync();
-                _logger.LogInformation("Confirmation token generated and saved.");
+                var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+                _logger.LogInformation("Email token generated.");
 
-                var confirmationLink = BuildPasswordResetLink(token);
+                var confirmationLink = BuildPasswordResetLink(user.Id, token);
                 var htmlTemplate = LoadPasswordResetTemplate();
 
                 var userFirstName = user.FirstName ?? user.Email;
@@ -121,17 +108,17 @@ namespace MealGeniusBackend.Services
             try
             {
                 _logger.LogInformation("Generating email confirmation token.");
-                var user = await _userManager.FindByEmailAsync(email);
+                var user = await _userManager.FindByEmailAsync(email) ?? throw new InvalidOperationException("User not found.");
                 var token = GenerateSecureToken();
                 _dbcontext.ConfirmationTokens.Add(new ConfirmationToken
                 {
                     UserId = user.Id,
-                    Token = token,
+                    Token = TokenHash.Compute(token),
                     IssuedAt = DateTime.UtcNow,
                     TokenType = TokenType.ConfirmAccess
                 });
                 await _dbcontext.SaveChangesAsync();
-                _logger.LogInformation("Confirmation token generated and saved.");
+                _logger.LogInformation("Email token generated.");
 
                 var userFirstName = user?.FirstName ?? "";
 
@@ -160,23 +147,23 @@ namespace MealGeniusBackend.Services
             }
         }
 
-        private string BuildPasswordResetLink(string token)
+        private string BuildPasswordResetLink(string userId, string token)
         {
-            var frontendBaseUrl = Environment.GetEnvironmentVariable("FRONTEND_URL") ?? "http://localhost:3000";
+            var frontendBaseUrl = _configuration["FRONTEND_URL"] ?? "http://localhost:3000";
             var confirmationPageRoute = "/reset-password";
-            return $"{frontendBaseUrl}{confirmationPageRoute}?token={Uri.EscapeDataString(token)}";
+            return $"{frontendBaseUrl}{confirmationPageRoute}?userId={Uri.EscapeDataString(userId)}&token={Uri.EscapeDataString(token)}";
         }
 
         private string BuildConfirmPaymentLink(string token)
         {
-            var frontendBaseUrl = Environment.GetEnvironmentVariable("FRONTEND_URL") ?? "http://localhost:3000";
+            var frontendBaseUrl = _configuration["FRONTEND_URL"] ?? "http://localhost:3000";
             var confirmationPageRoute = "/confirm-payment";
             return $"{frontendBaseUrl}{confirmationPageRoute}?token={Uri.EscapeDataString(token)}";
         }
         private string BuildConfirmationLink(string userId, string token)
         {
-            var frontendBaseUrl = Environment.GetEnvironmentVariable("FRONTEND_URL") ?? "http://localhost:3000";
-            var confirmationPageRoute = Environment.GetEnvironmentVariable("CONFIRMATION_PAGE_ROUTE") ?? "/confirm-account";
+            var frontendBaseUrl = _configuration["FRONTEND_URL"] ?? "http://localhost:3000";
+            var confirmationPageRoute = _configuration["CONFIRMATION_PAGE_ROUTE"] ?? "/confirm-account";
             return $"{frontendBaseUrl}{confirmationPageRoute}?userId={userId}&token={Uri.EscapeDataString(token)}";
         }
         //passwordTemplate.html
@@ -215,20 +202,20 @@ namespace MealGeniusBackend.Services
 
         private string CustomizePasswordResetEmailTemplate(string template, string name, string resetLink)
         {
-           return template.Replace("{Name}", name).Replace("{resetLink}", resetLink);
+           return template.Replace("{Name}", WebUtility.HtmlEncode(name)).Replace("{resetLink}", resetLink);
 
         }
 
 
         private string CustomizePaymentConfirmationEmailTemplate(string template, string name, string paymentConfirmationLink)
         {
-            return template.Replace("{Name}", name).Replace("{paymentConfirmationLink}", paymentConfirmationLink);
+            return template.Replace("{Name}", WebUtility.HtmlEncode(name)).Replace("{paymentConfirmationLink}", paymentConfirmationLink);
 
         }
 
         private string CustomizeEmailTemplate(string template, string name, string confirmationLink)
         {
-            return template.Replace("{Name}", name).Replace("{confirmationLink}", confirmationLink);
+            return template.Replace("{Name}", WebUtility.HtmlEncode(name)).Replace("{confirmationLink}", confirmationLink);
         }
 
         private async Task SendEmail(string toEmail,string subject, string htmlTemplate)
@@ -253,7 +240,7 @@ namespace MealGeniusBackend.Services
 
         private string GenerateRandomString(int length)
         {
-            using (var randomNumberGenerator = new RNGCryptoServiceProvider())
+            using (var randomNumberGenerator = RandomNumberGenerator.Create())
             {
                 var randomBytes = new byte[length];
                 randomNumberGenerator.GetBytes(randomBytes);

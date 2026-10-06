@@ -18,7 +18,7 @@ namespace MealGeniusBackend.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.3")
+                .HasAnnotation("ProductVersion", "8.0.28")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -212,6 +212,19 @@ namespace MealGeniusBackend.Migrations
                     b.HasKey("PaymentID");
 
                     b.ToTable("PaymentRegistrations");
+                });
+
+            modelBuilder.Entity("MealGeniusBackend.DataAcess.ProcessedStripeEvent", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("ProcessedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ProcessedStripeEvents");
                 });
 
             modelBuilder.Entity("MealGeniusBackend.DataAcess.UserDashboard", b =>

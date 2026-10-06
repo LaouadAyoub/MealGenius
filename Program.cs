@@ -1,41 +1,25 @@
-using MealGeniusBackend.DataAcess;
-using MealGeniusBackend.Services;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.AspNetCore.Identity;
-using OpenAI_API;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
-using System.Text;
-//using MealGeniusBackend.Models.UserModel;
-using MealGeniusBackend.DataAccess;
-using NLog.Extensions.Logging;
-using Microsoft.AspNetCore.Hosting;
 using NLog;
-using ILogger = NLog.ILogger;
 
-internal class Program
+public class Program
 {
-    private static readonly ILogger Logger = LogManager.GetCurrentClassLogger();
-
-    private static void Main(string[] args)
+    public static void Main(string[] args)
     {
-        try
-        {
-            CreateHostBuilder(args).Build().Run();
-            Logger.Info("Application ran successfully.");
-        }
+        try { CreateHostBuilder(args).Build().Run(); }
         catch (Exception ex)
         {
-            Logger.Error(ex, "An error occurred while running the application.");
+            LogManager.GetCurrentClassLogger().Error(ex, "Application stopped unexpectedly.");
+            throw;
         }
+        finally { LogManager.Shutdown(); }
     }
+
     public static IHostBuilder CreateHostBuilder(string[] args) =>
         Host.CreateDefaultBuilder(args)
-            .ConfigureWebHostDefaults(webBuilder =>
+            .ConfigureAppConfiguration((_, config) =>
             {
-                var port = Environment.GetEnvironmentVariable("PORT") ?? "5139";
-                webBuilder.UseStartup<Startup>().UseUrls("http://*:" + port);
-
-            });
+                config.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: false);
+                config.AddEnvironmentVariables();
+                config.AddCommandLine(args);
+            })
+            .ConfigureWebHostDefaults(web => web.UseStartup<Startup>());
 }

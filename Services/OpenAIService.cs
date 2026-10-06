@@ -1,309 +1,115 @@
-﻿using MealGeniusBackend.Models.ErrorsHandlers;
-using Newtonsoft.Json;
-using OpenAI_API;
-using OpenAI_API.Chat;
-using OpenAI_API.Images;
-using System.Text.RegularExpressions;
+using System.Net;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using Newtonsoft.Json.Linq;
 
-namespace MealGeniusBackend.Services
+namespace MealGeniusBackend.Services;
+
+public interface IOpenAIService
 {
-    public interface IOpenAIService
+    Task<string> GetResponseAsync(string systemPrompt, string userPrompt, int tokens);
+    Task<string> GenerateJsonBasedOnPromptResponseAsync(string systemPrompt, string userPrompt, int maxTokens, double temperature = 0);
+    Task<byte[]> GenerateImageForMealAsync(string prompt);
+}
+
+public sealed class OpenAIConcurrency(IConfiguration configuration) : IDisposable
+{
+    public SemaphoreSlim Gate { get; } = new(Math.Clamp(configuration.GetValue("OpenAI:MaxConcurrency", 3), 1, 12));
+    public void Dispose() => Gate.Dispose();
+}
+
+public class OpenAIService(HttpClient http, IConfiguration configuration, OpenAIConcurrency concurrency,
+    GenerationCancellation cancellation, ILogger<OpenAIService> logger) : IOpenAIService
+{
+    public Task<string> GetResponseAsync(string systemPrompt, string userPrompt, int tokens) =>
+        Chat(systemPrompt, userPrompt, tokens, false, 0.5);
+
+    public Task<string> GenerateJsonBasedOnPromptResponseAsync(string systemPrompt, string userPrompt,
+        int maxTokens, double temperature = 0) => Chat(systemPrompt, userPrompt, maxTokens, true, temperature);
+
+    private async Task<string> Chat(string systemPrompt, string userPrompt, int tokens, bool json, double temperature)
     {
-        Task<string> GetResponseAsync(string systemPrompt, string userPrompt, OpenAI_API.Models.Model model, int tokens);
-        Task<string> GenerateJsonBasedOnPromptResponseAsync(string systemPromptJson, string userPromptJson, int maxTokens, string model = "gpt-3.5-turbo-1106", double temperature = 0.0);
-        Task<string> GenerateImageForMealAsync(string chatImagePromptResponse);
-
-        Task<string> GenerateImageForMealAsyncFlexibleDelay(string chatImagePromptResponse);
-
+        var body = new JsonObject
+        {
+            ["model"] = configuration[json ? "OpenAI:JsonModel" : "OpenAI:TextModel"] ?? "gpt-4.1-mini",
+            ["temperature"] = temperature,
+            ["max_tokens"] = Math.Max(tokens, json ? 4000 : tokens),
+            ["messages"] = new JsonArray(
+                new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
+                new JsonObject { ["role"] = "user", ["content"] = userPrompt })
+        };
+        if (json) body["response_format"] = new JsonObject { ["type"] = "json_object" };
+        using var response = await Send("chat/completions", body);
+        var choice = response.RootElement.GetProperty("choices")[0];
+        if (choice.GetProperty("finish_reason").GetString() != "stop")
+            throw new InvalidDataException("AI response was incomplete or refused.");
+        var text = choice.GetProperty("message").GetProperty("content").GetString();
+        if (string.IsNullOrWhiteSpace(text)) throw new InvalidDataException("AI returned empty content.");
+        if (json) ValidateJson(text);
+        return text;
     }
 
-    public partial class OpenAIService : IOpenAIService
+    public async Task<byte[]> GenerateImageForMealAsync(string prompt)
     {
-        private readonly OpenAIAPI _openAiApi;
-        private readonly ILogger<OpenAIService> _logger;  // Add this line
-
-        public OpenAIService(OpenAIAPI openAiApi, ILogger<OpenAIService> logger)
+        using var response = await Send("images/generations", new JsonObject
         {
-            _openAiApi = openAiApi;
-            _logger = logger;  // Assign logger
-
-        }
-
-        public async Task<string> GetResponseAsync(string systemPrompt, string userPrompt, OpenAI_API.Models.Model model, int tokens)
-        {
-            return await ExecuteWithRetryAsync(async () =>
-            {
-                var chat = CreateConversation(model, tokens);
-                chat.AppendSystemMessage(systemPrompt);
-                chat.AppendUserInput(userPrompt);
-                var response = await chat.GetResponseFromChatbotAsync();
-                return response;
-            });
-        }
-        public async Task<string> GenerateJsonBasedOnPromptResponseAsync(string systemPromptJson, string userPromptJson, int maxTokens, string model = "gpt-3.5-turbo-1106" , double temperature = 0.0)
-        {
-            return await ExecuteWithRetryAsync(async () =>
-            {
-                _logger.LogInformation("GenerateJsonBasedOnPromptResponseAsync: Starting generation of JSON based on prompt response");
-                var chatRequest = new ChatRequest()
-                {
-                    //Model = "gpt-3.5-turbo-1106", // Ajustez le modèle au besoin
-                    //Model = "gpt-4-1106-preview",
-                    Model = model,
-                    Temperature = temperature,
-                    MaxTokens = maxTokens,
-                    ResponseFormat = ChatRequest.ResponseFormats.JsonObject,
-                    Messages = new List<ChatMessage> {
-                        new ChatMessage(ChatMessageRole.System, systemPromptJson),
-                        new ChatMessage(ChatMessageRole.User, userPromptJson)
-                    }
-                };
-
-                var chat = await _openAiApi.Chat.CreateChatCompletionAsync(chatRequest);
-                var choice = chat.Choices.FirstOrDefault();
-                var result = choice?.ToString();
-                // Handle null result here if necessary
-                if (result == null)
-                {
-                    throw new InvalidOperationException("The chat response did not include a choice.");
-                }
-
-                return result;
-            }, maxRetries : 10);
-        }
-
-
-        public async Task<string> GenerateImageForMealAsync(string chatImagePromptResponse)
-        {
-            return await ExecuteImageOperationWithRetryAsync(async () =>
-            {
-                string imageUrl = string.Empty;
-
-                var imageResponse = await _openAiApi.ImageGenerations.CreateImageAsync(
-                new ImageGenerationRequest(chatImagePromptResponse, OpenAI_API.Models.Model.DALLE3, ImageSize._1024, "standard"));
-
-                imageUrl = imageResponse.Data[0].Url.ToString();
-                if (string.IsNullOrEmpty(imageUrl))
-                {
-                    throw new InvalidOperationException("The image generation response did not include a URL.");
-                }
-
-                _logger.LogInformation($"Image successfully generated for meal");
-                return imageUrl; // Return the URL of the generated image
-            }, maxRetries : 10);
-
-        }
-
-        public async Task<T> ExecuteImageOperationWithRetryAsync<T>(Func<Task<T>> operation, int maxRetries = 5, double limitPerMinute = 7)
-        {
-            int attemptCount = 0;
-            int initialDelayInSeconds = 5; // Initial delay
-            int delayInSeconds = 20; // Délai initial
-
-            while (true)
-            {
-                try
-                {
-                    attemptCount++;
-                    return await operation();
-                }
-                catch (Exception ex)
-                {
-                    string errorContent = ex.Message; // Assurez-vous de récupérer le contenu de l'erreur correctement
-
-                    int jsonStartIndex = errorContent.IndexOf("Content: {");
-                    if (jsonStartIndex != -1)
-                    {
-                        // Extract the JSON substring from the message
-                        string jsonContent = errorContent.Substring(jsonStartIndex + "Content: ".Length).Trim();
-                        var errorResponse = JsonConvert.DeserializeObject<OpenApiErrorResponse>(jsonContent);
-                        if (errorResponse?.Error?.Code == "rate_limit_exceeded")
-                        {
-                            _logger.LogError($"Tentative {attemptCount}: Limite de taux dépassée: {errorResponse.Error.Message}");
-
-                            if (attemptCount >= maxRetries)
-                            {
-                                throw new Exception($"Impossible de compléter l'opération après {maxRetries} tentatives en raison de la limite de taux.", ex);
-                            }
-
-                            var match = Regex.Match(ex.Message, @"Limit: (\d+)/1min. Current: (\d+)/1min");
-                            if (match.Success && match.Groups.Count == 3)
-                            {
-                                // The actual limit from the error message (if needed)
-                                // int limit = int.Parse(match.Groups[1].Value);
-                                int current = int.Parse(match.Groups[2].Value);
-
-                                if (current > limitPerMinute)
-                                {
-
-
-
-                                    // Calculate the required total wait time in minutes
-                                    double totalWaitTimeInMinutes = (double)current / limitPerMinute;
-
-
-                                    // Subtract 1 minute since we assume that 1 minute has already passed
-                                    double delayInMinutes = totalWaitTimeInMinutes - 1;
-                                    _logger.LogError($"Attempt {attemptCount}: Rate limit exceeded. Requested {current} images. Need to wait for {delayInMinutes} more minutes.");
-
-                                    if (attemptCount >= maxRetries)
-                                    {
-                                        throw new Exception($"Failed to complete the image operation after {maxRetries} attempts due to rate limit.", ex);
-                                    }
-
-                                    double newDelayInSeconds = delayInMinutes * 60;
-                                    // Wait for the calculated delay in minutes before retrying
-                                    await Task.Delay(TimeSpan.FromSeconds(delayInSeconds + newDelayInSeconds));
-                                }
-                            }
-
-                                // Attendre le délai avant de réessayer
-                                await Task.Delay(TimeSpan.FromSeconds(delayInSeconds));
-
-                            // Augmenter le délai par 5 secondes pour le prochain essai
-                            //delayInSeconds += 5;
-                        }
-                    }                                    
-                    // Pour d'autres erreurs, relancez immédiatement
-                    await Task.Delay(TimeSpan.FromSeconds(initialDelayInSeconds));
-                    
-                }
-            }
-        }
-
-
-        public async Task<T> ExecuteWithRetryAsync<T>(Func<Task<T>> operation, int maxRetries = 5, int delayInSeconds = 4)
-        {
-            int attemptCount = 0;
-            while (true)
-            {
-                try
-                {
-                    attemptCount++;
-                    return await operation();
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError($"Attempt {attemptCount}: An error occurred during the operation: {ex.Message}");
-                    if (attemptCount >= maxRetries)
-                    {
-                        throw new Exception($"Failed to complete the operation after {maxRetries} attempts.", ex);
-                    }
-                    await Task.Delay(TimeSpan.FromSeconds(delayInSeconds));
-                }
-            }
-        }
-
-        public async Task<string> GenerateImageForMealAsyncFlexibleDelay(string chatImagePromptResponse)
-        {
-            return await ExecuteWithRetryAsyncFlexibledelay(async () =>
-            {
-                string imageUrl = string.Empty;
-
-                var imageResponse = await _openAiApi.ImageGenerations.CreateImageAsync(
-                new ImageGenerationRequest(chatImagePromptResponse, OpenAI_API.Models.Model.DALLE3, ImageSize._1024, "standard"));
-
-                imageUrl = imageResponse.Data[0].Url;
-                if (string.IsNullOrEmpty(imageUrl))
-                {
-                    throw new InvalidOperationException("The image generation response did not include a URL.");
-                }
-
-                _logger.LogInformation($"Image successfully generated for meal");
-                return imageUrl; // Return the URL of the generated image
-            }, maxRetries : 10, initialDelayInSeconds:5);
-
-        }
-
-
-
-        public async Task<T> ExecuteWithRetryAsyncFlexibledelay<T>(Func<Task<T>> operation, int maxRetries = 5, int initialDelayInSeconds = 4)
-        {
-            int attemptCount = 0;
-            int delayInSeconds = initialDelayInSeconds; // Définissez le retard initial
-
-            while (true)
-            {
-                try
-                {
-                    attemptCount++;
-                    return await operation();
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError($"Attempt {attemptCount}: An error occurred during the operation: {ex.Message} \n current delay is {delayInSeconds}");
-                    if (attemptCount >= maxRetries)
-                    {
-                        throw new Exception($"Failed to complete the operation after {maxRetries} attempts.", ex);
-                    }
-                    await Task.Delay(TimeSpan.FromSeconds(delayInSeconds));
-
-                    delayInSeconds += 10; // Augmentez le délai de 10 secondes pour chaque nouvelle tentative
-                }
-            }
-        }
-
-
-        private Conversation CreateConversation(OpenAI_API.Models.Model model, int tokens)
-        {
-            _logger.LogInformation("CreateConversation: Starting creation of new conversation");
-
-            try
-            {
-                var chat = _openAiApi.Chat.CreateConversation();
-
-                chat.RequestParameters.Temperature = 0.5;
-                chat.RequestParameters.MaxTokens = tokens;
-                chat.Model = model;
-
-
-                _logger.LogInformation("CreateConversation: Successfully created a new conversation");
-
-                return chat;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError("CreateConversation: An error occurred while creating conversation: {Message}", ex.Message);
-                throw;
-            }
-        }
-
-
-
-        static async Task<string> DownloadAndSaveImage(string imageUrl, string imageName)
-        {
-            string directoryPath = @"C:\persoProjects\MealPlanner\MealgeniusFull\MealGenius_ui\mealsImages\newUserImages";
-
-            string sanitizedImageName = SanitizeFileName(imageName);
-            string localFilePath = Path.Combine(directoryPath, sanitizedImageName + ".png");
-
-            if (!Directory.Exists(directoryPath))
-            {
-                Directory.CreateDirectory(directoryPath);
-            }
-
-            using (HttpClient client = new HttpClient())
-            {
-                HttpResponseMessage response = await client.GetAsync(imageUrl);
-                if (response.IsSuccessStatusCode)
-                {
-                    byte[] imageBytes = await response.Content.ReadAsByteArrayAsync();
-                    await File.WriteAllBytesAsync(localFilePath, imageBytes);
-                    return localFilePath; // Return the local file path
-                }
-            }
-
-            return null; // Return null if download fails
-        }
-        // Method to sanitize file names
-        static string SanitizeFileName(string fileName)
-        {
-            foreach (char c in Path.GetInvalidFileNameChars())
-            {
-                fileName = fileName.Replace(c, '_'); // Replace invalid chars with underscore
-            }
-            return fileName;
-        }
-
+            ["model"] = configuration["OpenAI:ImageModel"] ?? "gpt-image-2",
+            ["prompt"] = prompt, ["n"] = 1, ["size"] = "1024x1024", ["quality"] = "low",
+            ["output_format"] = "jpeg"
+        });
+        var encoded = response.RootElement.GetProperty("data")[0].GetProperty("b64_json").GetString();
+        if (string.IsNullOrWhiteSpace(encoded)) throw new InvalidDataException("AI returned no image.");
+        return Convert.FromBase64String(encoded);
     }
+
+    public static void ValidateJson(string text)
+    {
+        try { JObject.Parse(text); }
+        catch (Newtonsoft.Json.JsonException ex) { throw new InvalidDataException("AI returned malformed JSON.", ex); }
+    }
+
+    private async Task<JsonDocument> Send(string endpoint, JsonObject body)
+    {
+        var key = configuration["OPENAI_API_KEY"];
+        if (string.IsNullOrWhiteSpace(key)) throw new InvalidOperationException("Missing OPENAI_API_KEY.");
+        var token = cancellation.Token;
+        var attempts = Math.Clamp(configuration.GetValue("OpenAI:MaxAttempts", 3), 1, 5);
+        await concurrency.Gate.WaitAsync(token);
+        try
+        {
+            for (var attempt = 1; ; attempt++)
+            {
+                try
+                {
+                    using var request = new HttpRequestMessage(HttpMethod.Post, "https://api.openai.com/v1/" + endpoint)
+                    {
+                        Content = JsonContent.Create(body)
+                    };
+                    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", key);
+                    using var response = await http.SendAsync(request, token);
+                    if (response.IsSuccessStatusCode)
+                        return JsonDocument.Parse(await response.Content.ReadAsStringAsync(token));
+                    if (!IsTransient(response.StatusCode) || attempt >= attempts)
+                        throw new HttpRequestException($"OpenAI request failed with HTTP {(int)response.StatusCode}.", null, response.StatusCode);
+                    logger.LogWarning("Transient OpenAI HTTP {Status}; attempt {Attempt}/{Attempts}.",
+                        (int)response.StatusCode, attempt, attempts);
+                    var retryAfter = response.Headers.RetryAfter?.Delta ?? TimeSpan.FromSeconds(Math.Pow(2, attempt));
+                    await Task.Delay(TimeSpan.FromSeconds(Math.Clamp(retryAfter.TotalSeconds, 1, 30)), token);
+                }
+                catch (HttpRequestException ex) when (ex.StatusCode is null && attempt < attempts)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, attempt)), token);
+                }
+                catch (TaskCanceledException) when (!token.IsCancellationRequested && attempt < attempts)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, attempt)), token);
+                }
+            }
+        }
+        finally { concurrency.Gate.Release(); }
+    }
+    private static bool IsTransient(HttpStatusCode status) =>
+        status is HttpStatusCode.TooManyRequests or HttpStatusCode.RequestTimeout || (int)status >= 500;
 }

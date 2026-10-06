@@ -5,7 +5,6 @@ using MealGeniusBackend.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
-using OpenAI_API;
 using Stripe;
 using System.Text;
 // OpenAI_API.Models.Model.GPT4
@@ -61,20 +60,7 @@ namespace MealGeniusBackend.Services.Dashboard
 
                 var existingMealPlan = _dbContext.MealPlans.SingleOrDefault(mealPlan => mealPlan.TaskId == userTaskDTO.Id);
 
-                if (existingMealPlan is not null && !existingMealPlan.MealPlanJson.IsNullOrEmpty())
-                {
-                    if (userTaskDTO.Status == UserTaskStatus.TobeRetried)
-                    {
-                        _dbContext.MealPlans.Remove(existingMealPlan);
-                        await _dbContext.SaveChangesAsync();
-                    }
-                    else
-                    {
-                        _logger.LogInformation("Mealplan already exists for this task");
-                        return;
-                    }
-                }
-
+                if (existingMealPlan is not null) return;
 
                 // Generate First Json that contains the meals PreData
                 var timer = new ServiceTaskTimer("MealPlanService", "The generation of : Create 12 personalized meal ideas");
@@ -84,13 +70,13 @@ namespace MealGeniusBackend.Services.Dashboard
 
 
 
-                var userDashboard = _dbContext.UserDashboards.FirstOrDefault(u => u.UserId == userTaskDTO.UserId);
+                var userDashboard = _dbContext.UserDashboards.Single(u => u.TaskId == userTaskDTO.Id);
                 var Macros = userDashboard.MacroTargets;
                 var Micros = userDashboard.MicroGuide;
                 var HealthGoals = userDashboard.UserGoalsGuide;
                 var kpis = userDashboard.JsonUserKeyInfos;
 
-                var UserInputsJson = userInput.UserData;
+                var UserInputsJson = PromptPrivacy.RemoveEmail(userInput.UserData);
                 string systemPromptJsonMealsGeneration = $@"You are an AI assistant for MealGenius, an app designed for personalized nutrition and meal planning.
  
                                 It focuses on setting nutritional goals and providing tailored meal plans based on user data. 
@@ -139,15 +125,14 @@ namespace MealGeniusBackend.Services.Dashboard
                 
                 
                 
-                var userMealsJson = await _openAIService.GenerateJsonBasedOnPromptResponseAsync(systemPromptJsonMealsGeneration, userPromptJsonMealsGeneration, 1000, model: "gpt-4-1106-preview", temperature: 0.8);
+                var userMealsJson = await _openAIService.GenerateJsonBasedOnPromptResponseAsync(systemPromptJsonMealsGeneration, userPromptJsonMealsGeneration, 1000, temperature: 0.8);
                 
                 
                 UserMealsRoot? theUserMealsRoot = JsonConvert.DeserializeObject<UserMealsRoot>(userMealsJson);
                 timer.StopAndLog();
-                if (theUserMealsRoot is null)
+                if (theUserMealsRoot?.UserMeals is null || theUserMealsRoot.UserMeals.Count == 0)
                 {
-                    _logger.LogError("UserMealsRoot is null");
-                    return;
+                    throw new InvalidDataException("AI returned no meals.");
                 }
                 //Meal Recipe and PostData Generation
                 var tasks = new List<Task>();
@@ -431,7 +416,7 @@ Please Ensure that the markdown is similar to the specified format to make it ea
 Start directly by the markdown header  : # The Title of the Recipe
 ";
 
-            var chatRecipeResponse = await _openAIService.GetResponseAsync(systemPrompt, userRecipeGenerationprompt, OpenAI_API.Models.Model.GPT4_Turbo, 4095);
+            var chatRecipeResponse = await _openAIService.GetResponseAsync(systemPrompt, userRecipeGenerationprompt, 4095);
 
             return chatRecipeResponse;
         }

@@ -11,7 +11,7 @@ using Newtonsoft.Json;
 
 namespace MealGeniusBackend.Controllers
 {
-    [Authorize]
+    [Authorize(Policy = "PaidUser")]
     [Route("api/[controller]")]
     [ApiController]
     public class MealplanController : Controller
@@ -72,6 +72,8 @@ namespace MealGeniusBackend.Controllers
         [HttpPost("UpdateMealPlan")]
         public async Task<IActionResult> UpdateMealPlan([FromBody] UserMealsRoot mealPlanJson)
         {
+            if (mealPlanJson.UserMeals is null || mealPlanJson.UserMeals.Count is < 1 or > 50)
+                return BadRequest("Provide between 1 and 50 meals.");
             // Get the current authenticated user
             var user = await _userManager.FindByNameAsync(User?.Identity?.Name);
             if (user == null)
@@ -80,6 +82,7 @@ namespace MealGeniusBackend.Controllers
             }
 
             var existingMealPlan = await _dbcontext.MealPlans
+                                  .Include(p => p.Task)
                                   .Where(ud => ud.UserId == user.Id)
                                   .OrderByDescending(m => m.CreatedAt)
                                   .FirstOrDefaultAsync();
@@ -89,7 +92,11 @@ namespace MealGeniusBackend.Controllers
             }
             var userNewMealPlan = JsonConvert.SerializeObject(mealPlanJson);
 
+            if (existingMealPlan.Task.Status != UserTaskStatus.Completed)
+                return Conflict("Wait for generation to finish before editing meals.");
+
             existingMealPlan.MealPlanJson = userNewMealPlan;
+            existingMealPlan.MealPlanVersion++;
             _dbcontext.MealPlans.Update(existingMealPlan);
             await _dbcontext.SaveChangesAsync();
 

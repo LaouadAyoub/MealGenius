@@ -3,7 +3,6 @@ using MealGeniusBackend.DataAcess;
 using MealGeniusBackend.Models;
 using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
-using OpenAI_API;
 using Stripe;
 using System.Text;
 // OpenAI_API.Models.Model.GPT4
@@ -63,7 +62,7 @@ namespace MealGeniusBackend.Services.Dashboard
 
 
                 // Generate First Json that contains the meals PreData
-                var UserInputsJson = userInput.UserData;
+                var UserInputsJson = PromptPrivacy.RemoveEmail(userInput.UserData);
 
                 UserMealsRoot theUserMealsRoot = JsonConvert.DeserializeObject<UserMealsRoot>(existingMealPlan.MealPlanJson);
 
@@ -73,14 +72,11 @@ namespace MealGeniusBackend.Services.Dashboard
 
                 if (mealWithNoImage is null)
                 {
+                    userTask.MealsImagesStatus = UserMealsImagesStatus.Completed;
+                    existingMealPlan.MealsImagesVersion = Math.Max(1, existingMealPlan.MealsImagesVersion);
+                    await _dbContext.SaveChangesAsync();
                     return;
                 }
-
-                // TODO had ligne khessni n7eidha
-                //if (userTask.MealsImagesStatus is UserMealsImagesStatus.Completed)
-                //{
-                //    return;
-                //}
                 userTask.MealsImagesStatus = UserMealsImagesStatus.Ongoing;
                 await _dbContext.SaveChangesAsync();
 
@@ -121,7 +117,7 @@ namespace MealGeniusBackend.Services.Dashboard
                 It has to be something that makes people go, omg, I can't wait to get a fork and dig into that
                 ";
 
-                var chatImageNarrativeGenerationResponse = await _openAIService.GetResponseAsync(systemPromptImageGeneration, userImageNarrativeGeneration, OpenAI_API.Models.Model.ChatGPTTurbo, 4000);
+                var chatImageNarrativeGenerationResponse = await _openAIService.GetResponseAsync(systemPromptImageGeneration, userImageNarrativeGeneration, 4000);
                 var timer = new ServiceTaskTimer("MealsImagesService", "the generation of meal images");
                 timer.Start();
                 //Meal Recipe and PostData Generation
@@ -134,10 +130,15 @@ namespace MealGeniusBackend.Services.Dashboard
                     for (int j = i; j < i + maxParallelTasks && j < userMeals.Count; j++)
                     {
                         var meal = userMeals[j];
-                        tasks.Add(GenerateAndUploadMealsImages(meal, UserInputsJson, chatImageNarrativeGenerationResponse));
+                        tasks.Add(GenerateAndUploadMealsImages(meal, UserInputsJson, chatImageNarrativeGenerationResponse, userTaskDTO.Id));
                     }
 
-                    await Task.WhenAll(tasks);
+                    try { await Task.WhenAll(tasks); }
+                    finally
+                    {
+                        existingMealPlan.MealPlanJson = JsonConvert.SerializeObject(theUserMealsRoot);
+                        await _dbContext.SaveChangesAsync();
+                    }
                 }
                 timer.StopAndLog();
                 string mealPlanJson = JsonConvert.SerializeObject(theUserMealsRoot);
@@ -169,7 +170,7 @@ namespace MealGeniusBackend.Services.Dashboard
             }
         }
 
-        async Task GenerateAndUploadMealsImages(aMeal aMeal, string userData, string userImageNarrative)
+        async Task GenerateAndUploadMealsImages(aMeal aMeal, string userData, string userImageNarrative, Guid taskId)
         {
             try
             {
@@ -226,16 +227,15 @@ namespace MealGeniusBackend.Services.Dashboard
             Ensure that the image should be simple and clear, with a focus on the meal itself, so that it can be easily understood by users. and not be distracting or confusing.
             ";
                 // TODO: maybe GPT-3 turbo is enoguh for this task
-                var chatImagePromptResponse = await _openAIService.GetResponseAsync(systemPrompt, userPromptImageGeneration, OpenAI_API.Models.Model.GPT4_Turbo, 4000);
+                var chatImagePromptResponse = await _openAIService.GetResponseAsync(systemPrompt, userPromptImageGeneration, 4000);
 
 
-                var imageUrl = await _openAIService.GenerateImageForMealAsync(chatImagePromptResponse);
+                var imageBytes = await _openAIService.GenerateImageForMealAsync(chatImagePromptResponse);
 
-                if (!string.IsNullOrEmpty(imageUrl))
+                if (imageBytes.Length > 0)
                 {
                     //updload the image on azure blob storage
-                    var imageBlobUrl = await _azureBlobService.UploadImageCompressedAsync(imageUrl);
-                    //var imageBlobUrl = await _azureBlobService.UploadImageAsync(imageUrl);
+                    var imageBlobUrl = await _azureBlobService.UploadImageBytesAsync(imageBytes, taskId + "/" + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(aMeal.MealName))));
                     aMeal.MealImage = imageBlobUrl;
                 }
 

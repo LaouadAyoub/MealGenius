@@ -1,4 +1,4 @@
-﻿using FluentEmail.Core;
+using FluentEmail.Core;
 using FluentEmail.Core.Models;
 using MealGeniusBackend.DataAcess;
 using MealGeniusBackend.Models;
@@ -30,7 +30,9 @@ namespace MealGeniusBackend.Services.Auth
             var claims = new[]
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id),
-                new Claim(ClaimTypes.Name, user.UserName)
+                new Claim(ClaimTypes.Name, user.UserName!),
+                new Claim("security_stamp", user.SecurityStamp!),
+                new Claim("paid", user is MealGeniusBackend.Models.ApplicationUser appUser && appUser.PaymentConfirmed ? "true" : "false")
             };
 
             var jwtKey = _configuration["JwtConfig:Key"];
@@ -46,7 +48,7 @@ namespace MealGeniusBackend.Services.Auth
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(claims),
-                Expires = DateTime.Now.AddDays(1),
+                Expires = DateTime.UtcNow.AddDays(1),
                 SigningCredentials = signingCredentials,
                 Issuer = _configuration["JwtConfig:Issuer"],
                 Audience = _configuration["JwtConfig:Audience"],

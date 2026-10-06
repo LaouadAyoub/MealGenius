@@ -29,6 +29,7 @@ namespace MealGeniusBackend.DataAcess
         public DbSet<ConfirmationToken> ConfirmationTokens { get; set; }
         public DbSet<Feedback> Feedbacks { get; set; }
         public DbSet<PaymentRegistrationTable> PaymentRegistrations { get; set; }
+        public DbSet<ProcessedStripeEvent> ProcessedStripeEvents { get; set; }
 
 
 
@@ -124,6 +125,12 @@ namespace MealGeniusBackend.DataAcess
                 .HasKey(p => p.PaymentID);
 
         }
+    }
+
+    public class ProcessedStripeEvent
+    {
+        public string Id { get; set; } = "";
+        public DateTime ProcessedAt { get; set; }
     }
 
     public class ConfirmationToken

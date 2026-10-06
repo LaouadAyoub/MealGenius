@@ -1,8 +1,6 @@
 ﻿using MealGeniusBackend.DataAcess;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
-using OpenAI_API.Chat;
-using OpenAI_API;
 using static MealGeniusBackend.Controllers.MainAPIController;
 using Newtonsoft.Json.Linq;
 using MealGeniusBackend.Models;
@@ -50,22 +48,10 @@ namespace MealGeniusBackend.Services.Dashboard
                 var existingDashboard = _dbContext.UserDashboards.SingleOrDefault(dashboard => dashboard.TaskId == userTaskDTO.Id);
 
 
-                if (existingDashboard != null)
-                {
-                    if(userTaskDTO.Status == UserTaskStatus.TobeRetried)
-                    {
-                        _dbContext.UserDashboards.Remove(existingDashboard);
-                        await _dbContext.SaveChangesAsync();
-                    }
-                    else
-                    {
-                        _logger.LogInformation("Dashboard already exists for this task");
-                        return;
-                    }
-                }
+                if (existingDashboard != null) return;
                 var timer = new ServiceTaskTimer("UserDashboardService", "Start the generation of the dashboard");
                 timer.Start();
-                var dashboardInfos = await GetDashboardInfo(userInput.UserData);
+                var dashboardInfos = await GetDashboardInfo(PromptPrivacy.RemoveEmail(userInput.UserData));
                 timer.StopAndLog();
                 UserDashboard newDashboard = new UserDashboard
                 {
@@ -288,15 +274,15 @@ Conclude with a section that brings together all the user's goals, reinforcing t
 Note to AI: The final guide should be neatly organized, with line breaks and bullet points where appropriate, to make the information digestible and actionable. Utilize simple yet precise language to convey the message effectively to users worldwide. The aim is to deliver a readable, inviting, and instructive guide that empowers the user to pursue and achieve their individual nutritional objectives with confidence.
 ";
 
-                //var macroTargetsTask =  _openAIService.GetResponseAsync(systemPrompt, userMacroTargetsprompt, OpenAI_API.Models.Model.GPT4, 5500);
-                //var microGuideTask =  _openAIService.GetResponseAsync(systemPrompt, userMicroGuidePrompt, OpenAI_API.Models.Model.GPT4, 5500);
-                //var waterIntakeTask =  _openAIService.GetResponseAsync(systemPrompt, userWaterIntakePrompt, OpenAI_API.Models.Model.GPT4, 6500);
-                //var userGoalsTask =  _openAIService.GetResponseAsync(systemPrompt, UserGoalsGuideUserPrompt, OpenAI_API.Models.Model.GPT4, 5500);
+                //var macroTargetsTask =  _openAIService.GetResponseAsync(systemPrompt, userMacroTargetsprompt, 5500);
+                //var microGuideTask =  _openAIService.GetResponseAsync(systemPrompt, userMicroGuidePrompt, 5500);
+                //var waterIntakeTask =  _openAIService.GetResponseAsync(systemPrompt, userWaterIntakePrompt, 6500);
+                //var userGoalsTask =  _openAIService.GetResponseAsync(systemPrompt, UserGoalsGuideUserPrompt, 5500);
 
-                var macroTargetsTask = _openAIService.GetResponseAsync(systemPrompt, userMacroTargetsprompt, OpenAI_API.Models.Model.GPT4, 5800);
-                var microGuideTask = _openAIService.GetResponseAsync(systemPrompt, userMicroGuidePrompt, OpenAI_API.Models.Model.GPT4, 6000);
-                var waterIntakeTask = _openAIService.GetResponseAsync(systemPrompt, userWaterIntakePrompt, OpenAI_API.Models.Model.GPT4, 5800);
-                var userGoalsTask = _openAIService.GetResponseAsync(systemPrompt, UserGoalsGuideUserPrompt, OpenAI_API.Models.Model.ChatGPTTurbo, 4096);
+                var macroTargetsTask = _openAIService.GetResponseAsync(systemPrompt, userMacroTargetsprompt, 5800);
+                var microGuideTask = _openAIService.GetResponseAsync(systemPrompt, userMicroGuidePrompt, 6000);
+                var waterIntakeTask = _openAIService.GetResponseAsync(systemPrompt, userWaterIntakePrompt, 5800);
+                var userGoalsTask = _openAIService.GetResponseAsync(systemPrompt, UserGoalsGuideUserPrompt, 4096);
 
                 await Task.WhenAll(macroTargetsTask, microGuideTask, waterIntakeTask, userGoalsTask);
 

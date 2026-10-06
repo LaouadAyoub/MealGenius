@@ -34,9 +34,9 @@ namespace MealGeniusBackend.Mapper
                 {
                     CuisineLikes = CombineLists(userProfile.CuisinePreferences, userProfile.OtherCuisinePreferences, "No specific cuisine preferences"),
                     TastePreferences = CombineLists(userProfile.TastePreferences, userProfile.OtherTastePreferences, "No specific taste preferences"),
-                    FavoriteMealTypes = userProfile.FavoriteDishes.Select(dish => dish.Text).ToList(),
-                    EssentialIngredients = CheckListAndAddMessage(userProfile.MustHaveIngredients.Select(ingredient => ingredient.Text).ToList(), "No essential liked ingredients specified"),
-                    DislikedIngredients = CheckListAndAddMessage(userProfile.UnlikedIngredients.Select(ingredient => ingredient.Text).ToList(), "No specifiec disliked ingredients"),
+                    FavoriteMealTypes = (userProfile.FavoriteDishes ?? []).Select(dish => dish.Text).ToList(),
+                    EssentialIngredients = CheckListAndAddMessage((userProfile.MustHaveIngredients ?? []).Select(ingredient => ingredient.Text).ToList(), "No essential liked ingredients specified"),
+                    DislikedIngredients = CheckListAndAddMessage((userProfile.UnlikedIngredients ?? []).Select(ingredient => ingredient.Text).ToList(), "No specifiec disliked ingredients"),
                     //PreferredCookingTime = userProfile.IdealCookingTime,
                     //MealPreparationStyle = userProfile.ServingPreference,
                     MeasurementForLiquids = userProfile.LiquidUnit,
