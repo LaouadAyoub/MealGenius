@@ -2,11 +2,15 @@
 
 MealGenius is a personalized meal-planning product built around an ASP.NET Core backend. It collects nutrition goals and food preferences, runs a multi-stage generation pipeline through RabbitMQ, saves results in PostgreSQL, and stores generated meal images in Azure Blob Storage. A separate frontend consumes its APIs and polls for progress.
 
+**ASP.NET Core · PostgreSQL · RabbitMQ · OpenAI · Azure Blob Storage · Stripe**
+
+Originally built and deployed in 2023–2024. The application is currently offline; this repository presents the backend, its architecture and subsequent maintenance.
+
 ## Context and my contribution
 
 I designed and developed the .NET backend in 2023–2024. The frontend implementation and UI/UX were commissioned separately and integrated with my backend. My work covered authentication, API endpoints, persistence, background processing, OpenAI orchestration, payment processing, transactional email and Azure deployment integration.
 
-This restoration preserves that application structure. Security boundaries, failure handling, configuration and dependencies have been updated; it is not a newly designed architecture. The original product was deployed, according to the project owner's account. This repository contains deployment configuration, but does not establish whether the old infrastructure is still running.
+The original architecture and generation stages remain recognizable. Later maintenance strengthened account security, background-job reliability, configuration and dependency management, and added focused tests. [History notes](docs/history.md) distinguish the original implementation from these updates.
 
 ## Architecture
 
@@ -32,7 +36,7 @@ flowchart TD
     Frontend -->|Poll status and retrieve results| API
 ```
 
-One deployable web application contains both controllers and the hosted consumer. Controllers use services; those services use EF Core and external integrations. This is a service-oriented application within one process, not a microservice system. RabbitMQ is the broker demonstrated by the code and history; Azure Service Bus is not used.
+One deployable web application contains both controllers and the hosted consumer. Controllers delegate to services, which use EF Core and external integrations. RabbitMQ separates incoming HTTP requests from long-running generation work.
 
 ## Backend stack
 
@@ -71,29 +75,27 @@ This is **at-least-once delivery**, not exactly-once execution. There is no tran
 
 ## AI integration
 
-The interesting part is orchestration, not custom machine learning. Historical prompt templates and services assemble system/user messages from questionnaire data and previous stages. Email is removed from questionnaire JSON before it enters prompts; nutrition preferences and profile details still go to OpenAI.
+The backend orchestrates OpenAI API calls across several stages. Prompt templates and services assemble system/user messages from questionnaire data and previous results. Email is removed from questionnaire JSON before it enters prompts; nutrition preferences and profile details are sent to OpenAI.
 
 `OpenAIService` uses a typed `HttpClient`. Configurable defaults are `gpt-4.1-mini` for text/JSON and `gpt-image-2` for images. JSON requests use JSON-object mode; malformed JSON, empty responses and truncated completions fail explicitly. This is not full domain/schema validation, and generated nutritional advice is not independently verified.
 
 Images are returned as base64, decoded, converted to JPEG and uploaded under deterministic task/meal paths. Existing image URLs are retained when a stage is retried.
 
-External requests have bounded attempts (default three), limited concurrency (default three), timeout and cancellation. Transient HTTP/network failures are retried; permanent failures and malformed output are not retried indefinitely. The job deadline defaults to 20 minutes. Current model availability and account permissions must still be checked when configuring an actual deployment; no paid OpenAI call was made during restoration.
+External requests have bounded attempts (default three), limited concurrency (default three), timeout and cancellation. Transient HTTP/network failures are retried; permanent failures and malformed output fail the stage. The job deadline defaults to 20 minutes. Models are configurable to accommodate account access and API compatibility.
 
 ## Persistence
 
-`UserDbContext` combines Identity tables with questionnaire inputs, tasks, dashboards, meal plans, grocery/image catalogue data, access-token receipts and processed Stripe event IDs. EF migrations preserve the historical schema evolution; the restoration adds processed-event tracking.
+`UserDbContext` combines Identity tables with questionnaire inputs, tasks, dashboards, meal plans, grocery/image catalogue data, access-token receipts and processed Stripe event IDs. EF migrations preserve the historical schema evolution; processed-event tracking was added during later maintenance.
 
 Generated nested content is partly stored as JSON/JSONB rather than decomposed into many relational tables. That matches how complete generated documents are saved and served, while relational IDs retain ownership and task associations. The tradeoff is weaker database enforcement of internal document shape. Version fields allow polling clients to detect updated results.
 
 ## Azure and deployment
 
-Azure Blob Storage holds generated images. Create the configured container and arrange read access appropriate for the frontend; the application does not provision infrastructure or change container access policy.
+The backend was deployed on Azure App Service, with generated images stored in Azure Blob Storage. Image references are persisted in PostgreSQL and returned to the frontend. Infrastructure is configured separately; the application does not provision resources or change container access policy.
 
-The GitHub Actions workflow restores, builds, tests and publishes the backend. PostgreSQL-backed tests run against an ephemeral CI service. Deployment is an explicit manual workflow option using an Azure App Service name and publish-profile secret in the protected `production` environment. There is no infrastructure-as-code, and this restoration has not deployed anything.
+The GitHub Actions workflow restores, builds, tests and publishes the backend. PostgreSQL-backed tests use an ephemeral CI service. An optional manual deployment job uses an Azure App Service name and publish-profile secret configured through the `production` environment. No infrastructure-as-code is included.
 
-## Security and configuration
-
-**Do not make the original repository public yet.** Historical credentials require manual revocation/rotation. See [required rotation](SECURITY_ROTATION_REQUIRED.md) and the [publication checklist](docs/publication.md).
+## Configuration and authentication
 
 Configuration comes from standard .NET configuration plus ignored `appsettings.Local.json`, with environment variables taking precedence. Nested environment keys use double underscores. Copy [appsettings.example.json](appsettings.example.json) locally; never commit the populated file. `.env` is used by Docker Compose, not automatically loaded by ASP.NET Core.
 
@@ -113,11 +115,11 @@ Configuration comes from standard .NET configuration plus ignored `appsettings.L
 
 Optional overrides include `OpenAI__TextModel`, `OpenAI__JsonModel`, `OpenAI__ImageModel`, `OpenAI__MaxAttempts`, `OpenAI__MaxConcurrency`, `Generation__TimeoutMinutes` and `Messaging__Enabled`. Disabling messaging permits API inspection without a broker; it does not make generation functional.
 
-Cookie authentication is HttpOnly, host-only and SameSite=Lax. Browser mutations must send `X-MealGenius-Client: web`; signed Stripe webhooks are exempt. Production requires HTTPS. The configured frontend/backend topology must be compatible with these cookies. Password changes invalidate old sessions through Identity security-stamp validation. See [API compatibility notes](docs/api.md) before reconnecting an old frontend.
+Cookie authentication is HttpOnly, host-only and SameSite=Lax. Browser mutations must send `X-MealGenius-Client: web`; signed Stripe webhooks are exempt. Production requires HTTPS. The configured frontend/backend topology must be compatible with these cookies. Password changes invalidate old sessions through Identity security-stamp validation. [API notes](docs/api.md) describe account flows and frontend integration requirements.
 
 ## Running locally
 
-Prerequisites: .NET 8 SDK/runtime, Node.js for repository scans, Docker with a running engine (or your own PostgreSQL and RabbitMQ). External integrations need real, newly rotated credentials. No frontend source is included here.
+Prerequisites: .NET 8 SDK/runtime and Docker with a running engine, or separately configured PostgreSQL and RabbitMQ. Full generation requires OpenAI, Blob Storage, Mailgun and Stripe configuration. This repository contains the backend; the separate frontend source is not included.
 
 ```powershell
 Copy-Item .env.example .env
@@ -136,12 +138,16 @@ The development HTTP profile listens on port 5139; inspect Swagger at `/swagger`
 
 ```powershell
 dotnet test MealGeniusBackend.sln
-node scripts/scan-secrets.cjs
-node scripts/scan-secrets.cjs --history HEAD
 dotnet publish MealGeniusBackend.csproj -c Release -o artifacts/publish
 ```
 
-For database integration tests, set `MEALGENIUS_TEST_POSTGRES` to a disposable database whose name contains `test`. Without it, those tests are skipped. [Verification](docs/verification.md) distinguishes executed checks from infrastructure-dependent checks.
+For database integration tests, set `MEALGENIUS_TEST_POSTGRES` to a disposable database whose name contains `test`. Without it, those tests are skipped.
+
+## Tests
+
+Focused tests cover account ownership, password resets and session invalidation, paid access, questionnaire validation, bounded retries, malformed AI responses, grocery matching and generation completion. PostgreSQL integration tests cover migration replay, completed-job redelivery, partial grocery recovery and signed Stripe webhook replay.
+
+The recorded local run passed 18 tests and skipped three database-dependent tests. Full broker and external-service integration testing remains a separate step. [Verification details](docs/verification.md) record the checks performed.
 
 ## Repository structure
 
@@ -158,18 +164,14 @@ For database integration tests, set `MEALGENIUS_TEST_POSTGRES` to a disposable d
 | `PromptFiles/`, `JsonFiles/` | Prompt assets and reference data |
 | `EmailTemplate/` | Transactional email HTML |
 | `tests/` | Security, generation and PostgreSQL integration tests |
-| `scripts/`, `.github/workflows/` | Publication checks and delivery automation |
+| `scripts/`, `.github/workflows/` | Repository checks and delivery automation |
 
 ## Engineering decisions and what I would improve today
 
-The implementation separates long-running generation from HTTP handling, keeps progress in PostgreSQL, and serves image bytes from object storage. These are visible design properties, not claims about undocumented historical motivations. [History notes](docs/history.md) separate the original implementation from restoration work.
+Long-running generation runs behind RabbitMQ so controllers can return promptly. PostgreSQL stores task progress and document-like results; version fields support frontend polling. Blob Storage handles image bytes separately from API responses. The main tradeoffs are limited validation inside generated JSON and recovery across database, broker and external API boundaries.
 
 With what I know today, I would add a transactional outbox, stronger schemas for AI output, broker-backed fault-injection tests, and clearer operational metrics for failed jobs and external API costs. I would also separate transactional email delivery from payment processing. Those are useful next steps without replacing the application architecture.
 
-## Product visuals
-
-No verified product screenshots or frontend source are included in this backend checkout. Add owned screenshots from the actual application when available; the backend remains the technical focus.
-
 ## Current status
 
-The backend builds and focused local tests pass. Full generation and deployment still require configured external services. PostgreSQL integration tests are provided but were skipped locally because the Docker engine was unavailable. Historical nullable warnings remain. Credential rotation and the publication checklist are mandatory before public release; no production-readiness claim is made.
+MealGenius is preserved as a portfolio project and is currently offline. The backend builds and publishes, with focused tests passing. Running the complete product requires external-service configuration and a separate frontend. Known limitations include historical nullable warnings, incomplete validation of generated content and the delivery/recovery tradeoffs described above.
