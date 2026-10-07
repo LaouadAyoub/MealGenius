@@ -1,5 +1,13 @@
 # Verification record
 
+Follow-up checks on October 7, 2026:
+
+- Reproduced the two CI failures locally with PostgreSQL 18: the test history table was implicitly checked in `public`, and the synthetic Stripe event omitted the SDK-required `request` field.
+- Explicitly configured the isolated test schema for EF migration history in every test context and added `request: null` to the signed Stripe fixture. Production application behavior and the CI workflow were unchanged.
+- Strengthened migration verification to compare all known/applied migrations and run migration application a second time without changes.
+- The complete Release suite passed: **21 passed, 0 skipped, 0 failed**, including all three PostgreSQL tests. CI uses PostgreSQL 16; a new remote CI result has not yet been observed.
+- Current-file secret scan and whitespace checks passed.
+
 Local restoration checks on October 6, 2026:
 
 - Baseline Release built before edits; the restored solution builds.

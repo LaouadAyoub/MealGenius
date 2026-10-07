@@ -56,6 +56,8 @@ public sealed class PostgresTests
         Assert.Single(await context.MealPlans.ToListAsync());
         Assert.Single(await context.UserDashboards.ToListAsync());
         Assert.Empty(await context.Database.GetPendingMigrationsAsync());
+        Assert.Equal(context.Database.GetMigrations(), await context.Database.GetAppliedMigrationsAsync());
+        await context.Database.MigrateAsync();
         Assert.Equal(4, provider.GetRequiredService<StageCounter>().Calls);
     }
 
@@ -100,6 +102,7 @@ public sealed class PostgresTests
         var json = JsonConvert.SerializeObject(new
         {
             id = "evt_synthetic", @object = "event", type = "checkout.session.completed", api_version = "2023-10-16",
+            request = (string?)null,
             data = new { @object = new { id = "cs_synthetic", @object = "checkout.session", payment_status = "paid",
                 amount_total = 500, currency = "usd", client_reference_id = user.Id, customer_details = new { email = user.Email } } }
         });
@@ -151,13 +154,21 @@ internal sealed class TestDatabase : IAsyncDisposable
         await db.Database.MigrateAsync();
         return result;
     }
-    public UserDbContext Context() => new(new DbContextOptionsBuilder<UserDbContext>().UseNpgsql(connection).Options);
+    // Npgsql 8 checks public unless the history schema is explicit; SearchPath alone only locates application tables.
+    private void ConfigureDatabase(DbContextOptionsBuilder options) => options.UseNpgsql(connection,
+        postgres => postgres.MigrationsHistoryTable("__EFMigrationsHistory", schema));
+    public UserDbContext Context()
+    {
+        var options = new DbContextOptionsBuilder<UserDbContext>();
+        ConfigureDatabase(options);
+        return new UserDbContext(options.Options);
+    }
     public ServiceProvider Services()
     {
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddSingleton<IConfiguration>(new ConfigurationBuilder().Build());
-        services.AddDbContext<UserDbContext>(o => o.UseNpgsql(connection));
+        services.AddDbContext<UserDbContext>(ConfigureDatabase);
         services.AddSingleton<GenerationCancellation>();
         services.AddSingleton<StageCounter>();
         services.AddScoped<IUserDashboardService, FakeStages>();

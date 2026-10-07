@@ -147,7 +147,7 @@ For database integration tests, set `MEALGENIUS_TEST_POSTGRES` to a disposable d
 
 Focused tests cover account ownership, password resets and session invalidation, paid access, questionnaire validation, bounded retries, malformed AI responses, grocery matching and generation completion. PostgreSQL integration tests cover migration replay, completed-job redelivery, partial grocery recovery and signed Stripe webhook replay.
 
-The recorded local run passed 18 tests and skipped three database-dependent tests. Full broker and external-service integration testing remains a separate step. [Verification details](docs/verification.md) record the checks performed.
+The latest local run passed all 21 tests, including the PostgreSQL integration tests. Full broker and external-service integration testing remains a separate step. [Verification details](docs/verification.md) record the checks performed.
 
 ## Repository structure
 
