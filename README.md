@@ -4,13 +4,23 @@ MealGenius is a personalized meal-planning product built around an ASP.NET Core 
 
 **ASP.NET Core · PostgreSQL · RabbitMQ · OpenAI · Azure Blob Storage · Stripe**
 
-Originally built and deployed in 2023–2024. The application is currently offline; this repository presents the backend, its architecture and subsequent maintenance.
+Originally built and deployed in 2023–2024. The frontend is hosted on Vercel; the backend is currently offline. This repository presents the backend, its architecture and subsequent maintenance.
 
 ## Context and my contribution
 
-I designed and developed the .NET backend in 2023–2024. The frontend implementation and UI/UX were commissioned separately and integrated with my backend. My work covered authentication, API endpoints, persistence, background processing, OpenAI orchestration, payment processing, transactional email and Azure deployment integration.
+I designed and developed the .NET backend in 2023–2024, covering authentication, APIs, persistence, asynchronous processing, OpenAI integration, payments, transactional email and Azure deployment. I also contributed to the frontend and coordinated the work of the commissioned frontend developer and UI/UX designer, overseeing their integration into the complete product.
 
 The original architecture and generation stages remain recognizable. Later maintenance strengthened account security, background-job reliability, configuration and dependency management, and added focused tests. [History notes](docs/history.md) distinguish the original implementation from these updates.
+
+## Product preview
+
+MealGenius combined this backend with a separately developed frontend and custom UI/UX design. The screenshot below shows the landing page and examples of the meal-planning and grocery-list interface.
+
+![MealGenius landing page and product interface](docs/images/mealgenius-preview.png)
+
+[View the frontend on Vercel](https://mealgenious-48gx4ril3-laouadayoubs-projects.vercel.app/)
+
+The frontend remains hosted as a product preview. The backend is currently offline, so backend-dependent features such as account access and meal generation are unavailable. Access to the Vercel deployment may require authentication.
 
 ## Architecture
 
@@ -174,4 +184,4 @@ With what I know today, I would add a transactional outbox, stronger schemas for
 
 ## Current status
 
-MealGenius is preserved as a portfolio project and is currently offline. The backend builds and publishes, with focused tests passing. Running the complete product requires external-service configuration and a separate frontend. Known limitations include historical nullable warnings, incomplete validation of generated content and the delivery/recovery tradeoffs described above.
+MealGenius is preserved as a portfolio project. The frontend remains hosted on Vercel, while the backend is currently offline. The backend builds and publishes, with all 21 tests passing in the recorded local run. Running the complete product requires external-service configuration and a compatible frontend. Known limitations include historical nullable warnings, incomplete validation of generated content and the delivery/recovery tradeoffs described above.
